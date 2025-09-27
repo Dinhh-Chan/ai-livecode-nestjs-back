@@ -1,0 +1,9 @@
+{
+    "error-user-not-found": "User not found",
+    "error-password-wrong": "Password incorrect",
+    "error-old-password-wrong": "Old password incorrect",
+    "error-user-exist": "User existed",
+    "error-mimetype-invalid": "Mimetype invalid",
+    "error-network-restricted": "Network restricted",
+    "error-unauthorized": "Unauthorized"
+}
