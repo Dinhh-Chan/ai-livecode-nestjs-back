@@ -22,3 +22,14 @@ services:
     volumes:
       - ./docker/redis:/data
     restart: always
+  mongodb:
+    image: mongo:6.0
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: aisoft
+    ports:
+      - "${MONGODB_PORT}:27017"
+    volumes:
+      - ./docker/mongodb:/data/db
+    restart: always
