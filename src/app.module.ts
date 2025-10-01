@@ -21,6 +21,7 @@ import { OrganizationModule } from "./modules/organization/organization.module";
 import { ProblemsModule } from "./modules/problems/problems.module";
 import { TopicsModule } from "./modules/topics/topics.module";
 import { SubTopicsModule } from "./modules/sub-topics/sub-topics.module";
+import { TestCasesModule } from "./modules/test-cases/test-cases.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -44,6 +45,7 @@ import { SubTopicsModule } from "./modules/sub-topics/sub-topics.module";
         ProblemsModule,
         TopicsModule,
         SubTopicsModule,
+        TestCasesModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
