@@ -13,7 +13,7 @@ export class TestCasesController extends BaseControllerFactory<TestCases>(
     TestCases,
     ConditionTestCasesDto,
     CreateTestCasesDto,
-    UpdateTestCasesDto
+    UpdateTestCasesDto,
 ) {
     constructor(private readonly testCasesService: TestCasesService) {
         super(testCasesService);

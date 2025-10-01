@@ -6,13 +6,10 @@ import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
 
 @Injectable()
-export class TopicsService extends BaseService<
-    Topics,
-    TopicsRepository
-> {
+export class TopicsService extends BaseService<Topics, TopicsRepository> {
     constructor(
         @InjectRepository(Entity.TOPICS)
-        private readonly topicsRepository: TopicsRepository
+        private readonly topicsRepository: TopicsRepository,
     ) {
         super(topicsRepository);
     }

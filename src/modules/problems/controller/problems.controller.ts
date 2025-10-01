@@ -13,7 +13,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     Problems,
     ConditionProblemsDto,
     CreateProblemsDto,
-    UpdateProblemsDto
+    UpdateProblemsDto,
 ) {
     constructor(private readonly problemsService: ProblemsService) {
         super(problemsService);

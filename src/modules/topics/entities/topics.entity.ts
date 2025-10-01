@@ -55,14 +55,14 @@ export class Topics implements BaseEntity {
     @EntityDefinition.field({
         label: "Sub Topics",
         disableImport: true,
-        propertyTarget: "SubTopics"
+        propertyTarget: "SubTopics",
     })
     sub_topics?: any[];
 
     @EntityDefinition.field({
         label: "Problems",
         disableImport: true,
-        propertyTarget: "Problems"
+        propertyTarget: "Problems",
     })
     problems?: any[];
 }
@@ -74,11 +74,11 @@ export const TopicsSchema = SchemaFactory.createForClass(Topics);
 TopicsSchema.virtual("sub_topics", {
     ref: Entity.SUB_TOPICS,
     localField: "_id",
-    foreignField: "topic_id"
+    foreignField: "topic_id",
 });
 
 TopicsSchema.virtual("problems", {
     ref: Entity.PROBLEMS,
     localField: "_id",
-    foreignField: "topic_id"
+    foreignField: "topic_id",
 });

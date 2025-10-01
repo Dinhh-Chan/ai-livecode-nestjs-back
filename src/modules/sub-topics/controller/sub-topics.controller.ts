@@ -13,7 +13,7 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
     SubTopics,
     ConditionSubTopicsDto,
     CreateSubTopicsDto,
-    UpdateSubTopicsDto
+    UpdateSubTopicsDto,
 ) {
     constructor(private readonly subTopicsService: SubTopicsService) {
         super(subTopicsService);

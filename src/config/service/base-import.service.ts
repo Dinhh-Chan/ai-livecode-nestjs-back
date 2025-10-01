@@ -146,7 +146,7 @@ export class BaseImportService<
 
             const buffer = await wb.xlsx.writeBuffer();
             exportFileHelper(
-                buffer as Buffer,
+                buffer as unknown as Buffer,
                 "import-template",
                 ExportType.XLSX,
                 res,

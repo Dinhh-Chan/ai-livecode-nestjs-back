@@ -8,14 +8,12 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { OrganizationRepositorySql } from "./repository/organization-repository.sql";
 
 @Module({
-  imports: [
-    SequelizeModule.forFeature([OrganizationModel])
-  ],
-  controllers: [OrganizationController],
-  providers: [
-    OrganizationService,
-    RepositoryProvider(Entity.ORGANIZATION, OrganizationRepositorySql)
-  ],
-  exports: [OrganizationService]
+    imports: [SequelizeModule.forFeature([OrganizationModel])],
+    controllers: [OrganizationController],
+    providers: [
+        OrganizationService,
+        RepositoryProvider(Entity.ORGANIZATION, OrganizationRepositorySql),
+    ],
+    exports: [OrganizationService],
 })
 export class OrganizationModule {}

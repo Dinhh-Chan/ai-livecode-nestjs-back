@@ -40,7 +40,7 @@ import { SubTopicsModule } from "./modules/sub-topics/sub-topics.module";
         DataProcessModule,
         DataPartitionModule,
         CommonProviderModule,
-        OrganizationModule, 
+        OrganizationModule,
         ProblemsModule,
         TopicsModule,
         SubTopicsModule,

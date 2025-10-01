@@ -35,7 +35,6 @@ export class UpdateOrganizationDto {
     @IsNotEmpty({ message: "Số điện thoại không được để trống" })
     @EntityDefinition.field({ label: "Số điện thoại", required: true })
     telephone?: string;
-    
 
     @IsString()
     @IsNotEmpty({ message: "Số fax không được để trống" })
@@ -59,7 +58,6 @@ export class UpdateOrganizationDto {
 
     @IsString()
     @IsNotEmpty({ message: "Trạng thái không được để trống" })
-@EntityDefinition.field({ label: "Trạng thái", required: true })
+    @EntityDefinition.field({ label: "Trạng thái", required: true })
     status?: string;
-
 }

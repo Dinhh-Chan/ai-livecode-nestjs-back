@@ -13,7 +13,7 @@ export class OrganizationController extends BaseControllerFactory<Organization>(
     Organization,
     ConditionOrganizationDto,
     CreateOrganizationDto,
-    UpdateOrganizationDto
+    UpdateOrganizationDto,
 ) {
     constructor(private readonly organizationService: OrganizationService) {
         super(organizationService);

@@ -8,14 +8,12 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { ProblemsRepositorySql } from "./repository/problems-repository.sql";
 
 @Module({
-  imports: [
-    SequelizeModule.forFeature([ProblemsModel])
-  ],
-  controllers: [ProblemsController],
-  providers: [
-    ProblemsService,
-    RepositoryProvider(Entity.PROBLEMS, ProblemsRepositorySql)
-  ],
-  exports: [ProblemsService]
+    imports: [SequelizeModule.forFeature([ProblemsModel])],
+    controllers: [ProblemsController],
+    providers: [
+        ProblemsService,
+        RepositoryProvider(Entity.PROBLEMS, ProblemsRepositorySql),
+    ],
+    exports: [ProblemsService],
 })
 export class ProblemsModule {}

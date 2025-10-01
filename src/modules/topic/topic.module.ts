@@ -9,13 +9,15 @@ import { TopicSchema } from "./entities/topic.entity";
 
 @Module({
     imports: [
-        MongooseModule.forFeature([{ name: Entity.TOPICS, schema: TopicSchema }])
+        MongooseModule.forFeature([
+            { name: Entity.TOPICS, schema: TopicSchema },
+        ]),
     ],
     controllers: [TopicController],
     providers: [
         TopicService,
         RepositoryProvider(Entity.TOPICS, TopicMongoRepository),
     ],
-    exports: [TopicService]
+    exports: [TopicService],
 })
 export class TopicModule {}

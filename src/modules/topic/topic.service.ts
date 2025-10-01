@@ -9,7 +9,7 @@ import { Entity } from "@module/repository";
 export class TopicService extends BaseService<Topic, TopicRepository> {
     constructor(
         @InjectRepository(Entity.TOPICS)
-        private readonly topicRepository: TopicRepository
+        private readonly topicRepository: TopicRepository,
     ) {
         super(topicRepository);
     }

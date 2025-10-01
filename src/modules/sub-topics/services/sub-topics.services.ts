@@ -12,7 +12,7 @@ export class SubTopicsService extends BaseService<
 > {
     constructor(
         @InjectRepository(Entity.SUB_TOPICS)
-        private readonly subTopicsRepository: SubTopicsRepository
+        private readonly subTopicsRepository: SubTopicsRepository,
     ) {
         super(subTopicsRepository);
     }

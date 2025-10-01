@@ -12,35 +12,35 @@ export class SubTopicsModel extends Model implements SubTopics {
     @Column({
         type: DataType.STRING,
         primaryKey: true,
-        field: '_id'
+        field: "_id",
     })
     _id: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
-        field: '_topic_id'
+        field: "_topic_id",
     })
     topic_id: string;
 
     @Column({
         type: DataType.STRING(100),
         allowNull: false,
-        field: '_sub_topic_name'
+        field: "_sub_topic_name",
     })
     sub_topic_name: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_description'
+        field: "_description",
     })
     description?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_lo'
+        field: "_lo",
     })
     lo?: string;
 
@@ -48,7 +48,7 @@ export class SubTopicsModel extends Model implements SubTopics {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 0,
-        field: '_order_index'
+        field: "_order_index",
     })
     order_index: number;
 

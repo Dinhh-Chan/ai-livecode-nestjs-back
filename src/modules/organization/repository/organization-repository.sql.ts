@@ -4,7 +4,10 @@ import { Organization } from "../entities/organization.entity";
 import { OrganizationRepository } from "./organization-repository.interface";
 import { SqlRepository } from "@module/repository/sequelize/sql.repository";
 
-export class OrganizationRepositorySql extends SqlRepository<Organization> implements OrganizationRepository {
+export class OrganizationRepositorySql
+    extends SqlRepository<Organization>
+    implements OrganizationRepository
+{
     constructor(
         @InjectModel(OrganizationModel)
         private readonly organizationModel: typeof OrganizationModel,

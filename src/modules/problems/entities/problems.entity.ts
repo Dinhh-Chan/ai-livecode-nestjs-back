@@ -3,7 +3,13 @@ import { EntityDefinition } from "@common/constant/class/entity-definition";
 import { BaseEntity } from "@common/interface/base-entity.interface";
 import { Entity } from "@module/repository";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { IsString, IsOptional, IsBoolean, IsNumber, IsEnum } from "class-validator";
+import {
+    IsString,
+    IsOptional,
+    IsBoolean,
+    IsNumber,
+    IsEnum,
+} from "class-validator";
 import { HydratedDocument } from "mongoose";
 
 export enum ProblemDifficulty {
@@ -11,7 +17,7 @@ export enum ProblemDifficulty {
     MEDIUM = 2,
     NORMAL = 3,
     HARD = 4,
-    VERY_HARD = 5
+    VERY_HARD = 5,
 }
 
 @Schema({
@@ -64,10 +70,10 @@ export class Problems implements BaseEntity {
      */
     @IsEnum(ProblemDifficulty)
     @Prop({ default: ProblemDifficulty.EASY })
-    @EntityDefinition.field({ 
-        label: "Mức độ khó", 
+    @EntityDefinition.field({
+        label: "Mức độ khó",
         enum: Object.values(ProblemDifficulty),
-        example: ProblemDifficulty.EASY
+        example: ProblemDifficulty.EASY,
     })
     difficulty: ProblemDifficulty;
 
@@ -138,26 +144,25 @@ export class Problems implements BaseEntity {
     @EntityDefinition.field({ label: "Trạng thái hoạt động" })
     is_active: boolean;
 
-
     // Virtual fields for relationships
     @EntityDefinition.field({
         label: "Topic",
         disableImport: true,
-        propertyTarget: "Topics"
+        propertyTarget: "Topics",
     })
     topic?: any;
 
     @EntityDefinition.field({
-        label: "Sub Topic", 
+        label: "Sub Topic",
         disableImport: true,
-        propertyTarget: "SubTopics"
+        propertyTarget: "SubTopics",
     })
     sub_topic?: any;
 
     @EntityDefinition.field({
         label: "Test Cases",
         disableImport: true,
-        propertyTarget: "TestCases"
+        propertyTarget: "TestCases",
     })
     test_cases?: any[];
 }
@@ -170,18 +175,18 @@ ProblemsSchema.virtual("topic", {
     ref: Entity.TOPICS,
     localField: "topic_id",
     foreignField: "_id",
-    justOne: true
+    justOne: true,
 });
 
 ProblemsSchema.virtual("sub_topic", {
     ref: Entity.SUB_TOPICS,
-    localField: "sub_topic_id", 
+    localField: "sub_topic_id",
     foreignField: "_id",
-    justOne: true
+    justOne: true,
 });
 
 ProblemsSchema.virtual("test_cases", {
     ref: Entity.TEST_CASES,
     localField: "_id",
-    foreignField: "problem_id"
+    foreignField: "problem_id",
 });

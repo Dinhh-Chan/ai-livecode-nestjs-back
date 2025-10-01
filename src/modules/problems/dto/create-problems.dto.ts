@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsBoolean, IsNumber, IsOptional, IsEnum } from "class-validator";
+import {
+    IsString,
+    IsNotEmpty,
+    IsBoolean,
+    IsNumber,
+    IsOptional,
+    IsEnum,
+} from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
 import { ProblemDifficulty } from "../entities/problems.entity";
 
@@ -25,10 +32,10 @@ export class CreateProblemsDto {
 
     @IsEnum(ProblemDifficulty)
     @IsOptional()
-    @EntityDefinition.field({ 
-        label: "Mức độ khó", 
+    @EntityDefinition.field({
+        label: "Mức độ khó",
         enum: Object.values(ProblemDifficulty),
-        example: ProblemDifficulty.EASY
+        example: ProblemDifficulty.EASY,
     })
     difficulty?: ProblemDifficulty;
 
