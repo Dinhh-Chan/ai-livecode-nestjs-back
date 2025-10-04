@@ -71,4 +71,15 @@ export class CreateProblemsDto {
     @IsOptional()
     @EntityDefinition.field({ label: "Trạng thái hoạt động" })
     is_active?: boolean;
+
+    @IsString()
+    @IsOptional()
+    @EntityDefinition.field({ label: "Steps"})
+    steps?: string;
+
+    @IsString()
+    @IsOptional()
+    @EntityDefinition.field({ label: "Sets"})
+    sets?: string;
+
 }

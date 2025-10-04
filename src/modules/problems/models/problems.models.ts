@@ -1,7 +1,8 @@
 import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
-import { Column, DataType, Model, Table } from "sequelize-typescript";
+import { AllowNull, Column, DataType, Model, Table } from "sequelize-typescript";
 import { Problems, ProblemDifficulty } from "../entities/problems.entity";
+import { all } from "axios";
 
 @Table({
     tableName: Entity.PROBLEMS,
@@ -112,6 +113,21 @@ export class ProblemsModel extends Model implements Problems {
         field: '_is_active'
     })
     is_active: boolean;
+    @Column({
+        type: DataType.STRING, 
+        allowNull: true,
+        defaultValue: null,
+        field: '_sets'
+    })
+    sets?: string;
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+        defaultValue: null,
+        field: "_steps"
+    })
+    steps?: string;
+
 
     // Virtual fields for relationships
     topic?: any;
