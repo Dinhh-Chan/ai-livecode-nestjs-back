@@ -165,6 +165,24 @@ export class Problems implements BaseEntity {
         propertyTarget: "TestCases",
     })
     test_cases?: any[];
+    /**
+     * Sets - tập hợp dữ liệu
+     */
+    @IsString()
+    @IsOptional()
+    @Prop()
+    @EntityDefinition.field({ label: "Sets" })
+    sets?: string;
+
+    /**
+     * Steps - các bước thực hiện
+     */
+    @IsString()
+    @IsOptional()
+    @Prop()
+    @EntityDefinition.field({ label: "Steps" })
+    steps?: string;
+    
 }
 
 export type ProblemsDocument = HydratedDocument<Problems>;
