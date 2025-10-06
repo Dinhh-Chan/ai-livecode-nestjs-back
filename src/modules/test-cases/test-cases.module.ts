@@ -8,14 +8,12 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { TestCasesRepositorySql } from "./repository/test-cases-repository.sql";
 
 @Module({
-  imports: [
-    SequelizeModule.forFeature([TestCasesModel])
-  ],
-  controllers: [TestCasesController],
-  providers: [
-    TestCasesService,
-    RepositoryProvider(Entity.TEST_CASES, TestCasesRepositorySql)
-  ],
-  exports: [TestCasesService]
+    imports: [SequelizeModule.forFeature([TestCasesModel])],
+    controllers: [TestCasesController],
+    providers: [
+        TestCasesService,
+        RepositoryProvider(Entity.TEST_CASES, TestCasesRepositorySql),
+    ],
+    exports: [TestCasesService],
 })
 export class TestCasesModule {}

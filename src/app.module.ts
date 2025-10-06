@@ -41,7 +41,7 @@ import { TestCasesModule } from "./modules/test-cases/test-cases.module";
         DataProcessModule,
         DataPartitionModule,
         CommonProviderModule,
-        OrganizationModule, 
+        OrganizationModule,
         ProblemsModule,
         TopicsModule,
         SubTopicsModule,

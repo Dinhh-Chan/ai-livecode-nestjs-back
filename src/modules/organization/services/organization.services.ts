@@ -12,7 +12,7 @@ export class OrganizationService extends BaseService<
 > {
     constructor(
         @InjectRepository(Entity.ORGANIZATION)
-        private readonly organizationRepository: OrganizationRepository
+        private readonly organizationRepository: OrganizationRepository,
     ) {
         super(organizationRepository);
     }

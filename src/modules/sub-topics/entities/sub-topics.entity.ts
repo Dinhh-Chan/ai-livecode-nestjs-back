@@ -63,14 +63,14 @@ export class SubTopics implements BaseEntity {
     @EntityDefinition.field({
         label: "Topic",
         disableImport: true,
-        propertyTarget: "Topics"
+        propertyTarget: "Topics",
     })
     topic?: any;
 
     @EntityDefinition.field({
         label: "Problems",
         disableImport: true,
-        propertyTarget: "Problems"
+        propertyTarget: "Problems",
     })
     problems?: any[];
 }
@@ -83,11 +83,11 @@ SubTopicsSchema.virtual("topic", {
     ref: Entity.TOPICS,
     localField: "topic_id",
     foreignField: "_id",
-    justOne: true
+    justOne: true,
 });
 
 SubTopicsSchema.virtual("problems", {
     ref: Entity.PROBLEMS,
     localField: "_id",
-    foreignField: "sub_topic_id"
+    foreignField: "sub_topic_id",
 });

@@ -12,7 +12,7 @@ export class TestCasesService extends BaseService<
 > {
     constructor(
         @InjectRepository(Entity.TEST_CASES)
-        private readonly testCasesRepository: TestCasesRepository
+        private readonly testCasesRepository: TestCasesRepository,
     ) {
         super(testCasesRepository);
     }

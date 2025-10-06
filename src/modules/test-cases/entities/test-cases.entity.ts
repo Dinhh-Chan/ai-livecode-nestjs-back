@@ -61,7 +61,7 @@ export class TestCases implements BaseEntity {
     @EntityDefinition.field({
         label: "Problem",
         disableImport: true,
-        propertyTarget: "Problems"
+        propertyTarget: "Problems",
     })
     problem?: any;
 }
@@ -74,5 +74,5 @@ TestCasesSchema.virtual("problem", {
     ref: Entity.PROBLEMS,
     localField: "problem_id",
     foreignField: "_id",
-    justOne: true
+    justOne: true,
 });

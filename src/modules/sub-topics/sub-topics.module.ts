@@ -8,14 +8,12 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { SubTopicsRepositorySql } from "./repository/sub-topics-repository.sql";
 
 @Module({
-  imports: [
-    SequelizeModule.forFeature([SubTopicsModel])
-  ],
-  controllers: [SubTopicsController],
-  providers: [
-    SubTopicsService,
-    RepositoryProvider(Entity.SUB_TOPICS, SubTopicsRepositorySql)
-  ],
-  exports: [SubTopicsService]
+    imports: [SequelizeModule.forFeature([SubTopicsModel])],
+    controllers: [SubTopicsController],
+    providers: [
+        SubTopicsService,
+        RepositoryProvider(Entity.SUB_TOPICS, SubTopicsRepositorySql),
+    ],
+    exports: [SubTopicsService],
 })
 export class SubTopicsModule {}

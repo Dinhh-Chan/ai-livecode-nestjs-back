@@ -12,28 +12,28 @@ export class TestCasesModel extends Model implements TestCases {
     @Column({
         type: DataType.STRING,
         primaryKey: true,
-        field: '_id'
+        field: "_id",
     })
     _id: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: false,
-        field: '_problem_id'
+        field: "_problem_id",
     })
     problem_id: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: false,
-        field: '_input_data'
+        field: "_input_data",
     })
     input_data: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: false,
-        field: '_expected_output'
+        field: "_expected_output",
     })
     expected_output: string;
 
@@ -41,7 +41,7 @@ export class TestCasesModel extends Model implements TestCases {
         type: DataType.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-        field: '_is_public'
+        field: "_is_public",
     })
     is_public: boolean;
 
@@ -49,7 +49,7 @@ export class TestCasesModel extends Model implements TestCases {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 0,
-        field: '_order_index'
+        field: "_order_index",
     })
     order_index: number;
 

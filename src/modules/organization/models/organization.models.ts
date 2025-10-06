@@ -12,14 +12,14 @@ export class OrganizationModel extends Model implements Organization {
     @Column({
         type: DataType.STRING,
         primaryKey: true,
-        field: '_id'
+        field: "_id",
     })
     _id: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: false,
-        field: '_organId'
+        field: "_organId",
     })
     organId: string;
 
@@ -27,77 +27,77 @@ export class OrganizationModel extends Model implements Organization {
         type: DataType.TEXT,
         allowNull: false,
         unique: true,
-        field: '_ssId'
+        field: "_ssId",
     })
     ssId: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_organizationInCharge'
+        field: "_organizationInCharge",
     })
     organizationInCharge?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: false,
-        field: '_organName'
+        field: "_organName",
     })
     organName: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_organAdd'
+        field: "_organAdd",
     })
     organAdd?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_email'
+        field: "_email",
     })
     email?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_telephone'
+        field: "_telephone",
     })
     telephone?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_fax'
+        field: "_fax",
     })
     fax?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_website'
+        field: "_website",
     })
     website?: string;
 
     @Column({
         type: DataType.BOOLEAN,
         allowNull: true,
-        field: '_isExternal'
+        field: "_isExternal",
     })
     isExternal?: boolean;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_description'
+        field: "_description",
     })
     description?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_status'
+        field: "_status",
     })
     status?: string;
 }

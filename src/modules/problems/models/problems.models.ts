@@ -1,6 +1,12 @@
 import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
-import { AllowNull, Column, DataType, Model, Table } from "sequelize-typescript";
+import {
+    AllowNull,
+    Column,
+    DataType,
+    Model,
+    Table,
+} from "sequelize-typescript";
 import { Problems, ProblemDifficulty } from "../entities/problems.entity";
 import { all } from "axios";
 
@@ -13,35 +19,35 @@ export class ProblemsModel extends Model implements Problems {
     @Column({
         type: DataType.STRING,
         primaryKey: true,
-        field: '_id'
+        field: "_id",
     })
     _id: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: true,
-        field: '_topic_id'
+        field: "_topic_id",
     })
     topic_id?: string;
 
     @Column({
         type: DataType.STRING,
         allowNull: true,
-        field: '_sub_topic_id'
+        field: "_sub_topic_id",
     })
     sub_topic_id?: string;
 
     @Column({
         type: DataType.STRING(200),
         allowNull: false,
-        field: '_name'
+        field: "_name",
     })
     name: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: false,
-        field: '_description'
+        field: "_description",
     })
     description: string;
 
@@ -49,28 +55,28 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: ProblemDifficulty.EASY,
-        field: '_difficulty'
+        field: "_difficulty",
     })
     difficulty: ProblemDifficulty;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_code_template'
+        field: "_code_template",
     })
     code_template?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_guidelines'
+        field: "_guidelines",
     })
     guidelines?: string;
 
     @Column({
         type: DataType.TEXT,
         allowNull: true,
-        field: '_solution'
+        field: "_solution",
     })
     solution?: string;
 
@@ -78,7 +84,7 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 1000,
-        field: '_time_limit_ms'
+        field: "_time_limit_ms",
     })
     time_limit_ms: number;
 
@@ -86,7 +92,7 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 512,
-        field: '_memory_limit_mb'
+        field: "_memory_limit_mb",
     })
     memory_limit_mb: number;
 
@@ -94,7 +100,7 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.INTEGER,
         allowNull: false,
         defaultValue: 0,
-        field: '_number_of_tests'
+        field: "_number_of_tests",
     })
     number_of_tests: number;
 
@@ -102,7 +108,7 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-        field: '_is_public'
+        field: "_is_public",
     })
     is_public: boolean;
 
@@ -110,24 +116,23 @@ export class ProblemsModel extends Model implements Problems {
         type: DataType.BOOLEAN,
         allowNull: false,
         defaultValue: true,
-        field: '_is_active'
+        field: "_is_active",
     })
     is_active: boolean;
     @Column({
-        type: DataType.STRING, 
+        type: DataType.STRING,
         allowNull: true,
         defaultValue: null,
-        field: '_sets'
+        field: "_sets",
     })
     sets?: string;
     @Column({
         type: DataType.STRING,
         allowNull: true,
         defaultValue: null,
-        field: "_steps"
+        field: "_steps",
     })
     steps?: string;
-
 
     // Virtual fields for relationships
     topic?: any;
