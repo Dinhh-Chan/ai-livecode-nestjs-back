@@ -4,6 +4,9 @@ import { SubTopicsRepository } from "../repository/sub-topics-repository.interfa
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
+import { User } from "@module/user/entities/user.entity";
+import { GetManyQuery } from "@common/constant";
+import { BaseQueryOption } from "@module/repository/common/base-repository.interface";
 
 @Injectable()
 export class SubTopicsService extends BaseService<
@@ -15,5 +18,16 @@ export class SubTopicsService extends BaseService<
         private readonly subTopicsRepository: SubTopicsRepository,
     ) {
         super(subTopicsRepository);
+    }
+
+    /**
+     * Lấy danh sách sub-topics theo topic ID
+     */
+    async getByTopicId(
+        user: User,
+        topicId: string,
+        query?: GetManyQuery<SubTopics> & BaseQueryOption<unknown>,
+    ) {
+        return this.getMany(user, { topic_id: topicId }, query);
     }
 }

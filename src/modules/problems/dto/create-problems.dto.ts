@@ -81,12 +81,11 @@ export class CreateProblemsDto {
 
     @IsString()
     @IsOptional()
-    @EntityDefinition.field({ label: "Steps"})
+    @EntityDefinition.field({ label: "Steps" })
     steps?: string;
 
     @IsString()
     @IsOptional()
-    @EntityDefinition.field({ label: "Sets"})
+    @EntityDefinition.field({ label: "Sets" })
     sets?: string;
-
 }

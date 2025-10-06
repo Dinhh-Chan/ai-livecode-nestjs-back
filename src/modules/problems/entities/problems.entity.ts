@@ -182,7 +182,6 @@ export class Problems implements BaseEntity {
     @Prop()
     @EntityDefinition.field({ label: "Steps" })
     steps?: string;
-    
 }
 
 export type ProblemsDocument = HydratedDocument<Problems>;
