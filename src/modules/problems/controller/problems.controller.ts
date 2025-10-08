@@ -3,9 +3,13 @@ import { ProblemsService } from "../services/problems.services";
 import { Problems } from "../entities/problems.entity";
 import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { UpdateProblemsDto } from "../dto/update-problems.dto";
-import { Controller } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Controller, Get, Param, Query } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
+import { GetManyQuery } from "@common/constant";
+import { ReqUser } from "@common/decorator/auth.decorator";
+import { RequestQuery } from "@common/decorator/query.decorator";
+import { User } from "@module/user/entities/user.entity";
 
 @Controller("problems")
 @ApiTags("Problems")
@@ -17,5 +21,43 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
 ) {
     constructor(private readonly problemsService: ProblemsService) {
         super(problemsService);
+    }
+
+    @Get("by-sub-topic/:subTopicId")
+    @ApiOperation({
+        summary: "Lấy danh sách problems theo sub_topic_id",
+        description: "API để lấy tất cả problems thuộc về một sub topic cụ thể",
+    })
+    @ApiParam({
+        name: "subTopicId",
+        description: "ID của sub topic",
+        type: String,
+    })
+    @ApiQuery({
+        name: "sort",
+        required: false,
+        description: "Trường để sắp xếp",
+    })
+    @ApiQuery({
+        name: "order",
+        required: false,
+        description: "Thứ tự sắp xếp (asc/desc)",
+        enum: ["asc", "desc"],
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng records tối đa",
+    })
+    async getProblemsBySubTopic(
+        @ReqUser() user: User,
+        @Param("subTopicId") subTopicId: string,
+        @RequestQuery() query: GetManyQuery<Problems>,
+    ) {
+        return this.problemsService.getMany(
+            user,
+            { sub_topic_id: subTopicId },
+            query,
+        );
     }
 }
