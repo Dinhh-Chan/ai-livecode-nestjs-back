@@ -22,7 +22,8 @@ export class MongooseConfigService implements MongooseOptionsFactory {
         if (uri) {
             return {
                 uri,
-                retryDelay: 5000,
+                retryWrites: false,
+                retryReads: false,
             };
         } else {
             const { host, port, name, username, password } =
@@ -33,7 +34,8 @@ export class MongooseConfigService implements MongooseOptionsFactory {
                 pass: password,
                 authSource: "admin",
                 directConnection: true,
-                retryDelay: 5000,
+                retryWrites: false,
+                retryReads: false,
             };
         }
     }

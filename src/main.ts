@@ -182,8 +182,7 @@ async function bootstrap() {
         options: {
             host: tcp.host,
             port: tcp.port,
-            retryAttempts: 5,
-            retryDelay: 64,
+            retryAttempts: 0,
             socketClass: TcpSocket,
         },
     });
