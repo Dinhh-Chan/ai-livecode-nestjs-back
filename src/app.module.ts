@@ -22,6 +22,8 @@ import { ProblemsModule } from "./modules/problems/problems.module";
 import { TopicsModule } from "./modules/topics/topics.module";
 import { SubTopicsModule } from "./modules/sub-topics/sub-topics.module";
 import { TestCasesModule } from "./modules/test-cases/test-cases.module";
+import { JudgeNodesModule } from "./modules/judge-nodes/judge-nodes.module";
+import { JudgeNodeLogsModule } from "./modules/judge-node-logs/judge-node-logs.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -46,6 +48,8 @@ import { TestCasesModule } from "./modules/test-cases/test-cases.module";
         TopicsModule,
         SubTopicsModule,
         TestCasesModule,
+        JudgeNodesModule,
+        JudgeNodeLogsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
