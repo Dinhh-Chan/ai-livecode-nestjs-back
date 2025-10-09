@@ -37,22 +37,33 @@ export class TestCasesController extends BaseControllerFactory<TestCases>(
         name: "is_public",
         required: false,
         description: "Lọc theo trạng thái công khai (true/false)",
+        example: true,
     })
     @ApiQuery({
         name: "sort",
         required: false,
         description: "Trường để sắp xếp",
+        enum: [
+            "order_index",
+            "created_at",
+            "updated_at",
+            "input_data",
+            "expected_output",
+        ],
+        example: "order_index",
     })
     @ApiQuery({
         name: "order",
         required: false,
-        description: "Thứ tự sắp xếp (asc/desc)",
+        description: "Thứ tự sắp xếp (asc/desc). Mặc định là asc",
         enum: ["asc", "desc"],
+        example: "asc",
     })
     @ApiQuery({
         name: "limit",
         required: false,
         description: "Số lượng records tối đa",
+        example: 10,
     })
     async getTestCasesByProblem(
         @ReqUser() user: User,

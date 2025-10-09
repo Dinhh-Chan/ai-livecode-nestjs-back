@@ -37,17 +37,40 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         name: "sort",
         required: false,
         description: "Trường để sắp xếp",
+        enum: [
+            "name",
+            "difficulty",
+            "created_at",
+            "updated_at",
+            "time_limit_ms",
+            "memory_limit_mb",
+        ],
+        example: "difficulty",
     })
     @ApiQuery({
         name: "order",
         required: false,
-        description: "Thứ tự sắp xếp (asc/desc)",
+        description: "Thứ tự sắp xếp (asc/desc). Mặc định là asc",
         enum: ["asc", "desc"],
+        example: "asc",
     })
     @ApiQuery({
         name: "limit",
         required: false,
         description: "Số lượng records tối đa",
+        example: 10,
+    })
+    @ApiQuery({
+        name: "difficulty",
+        required: false,
+        description: "Lọc theo độ khó (1-5)",
+        example: 2,
+    })
+    @ApiQuery({
+        name: "is_public",
+        required: false,
+        description: "Lọc theo trạng thái công khai (true/false)",
+        example: true,
     })
     async getProblemsBySubTopic(
         @ReqUser() user: User,
