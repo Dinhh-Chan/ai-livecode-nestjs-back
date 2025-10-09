@@ -21,3 +21,9 @@ export const PROBLEMS = "Problems";
 export const TOPICS = "Topics";
 export const SUB_TOPICS = "SubTopics";
 export const TEST_CASES = "TestCases";
+
+// Judge system entities
+export const JUDGE_NODES = "JudgeNodes";
+export const STUDENT_SUBMISSIONS = "StudentSubmissions";
+export const TEST_CASE_RESULTS = "TestCaseResults";
+export const JUDGE_NODE_LOGS = "JudgeNodeLogs";

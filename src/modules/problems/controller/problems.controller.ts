@@ -3,13 +3,14 @@ import { ProblemsService } from "../services/problems.services";
 import { Problems } from "../entities/problems.entity";
 import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { UpdateProblemsDto } from "../dto/update-problems.dto";
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
 import { GetManyQuery } from "@common/constant";
-import { ReqUser } from "@common/decorator/auth.decorator";
+import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { RequestQuery } from "@common/decorator/query.decorator";
 import { User } from "@module/user/entities/user.entity";
+import { SystemRole } from "@module/user/common/constant";
 
 @Controller("problems")
 @ApiTags("Problems")
@@ -18,12 +19,36 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     ConditionProblemsDto,
     CreateProblemsDto,
     UpdateProblemsDto,
+    {
+        authorize: true,
+        routes: {
+            getById: {
+                roles: [SystemRole.USER, SystemRole.ADMIN],
+            },
+            getMany: {
+                roles: [SystemRole.USER, SystemRole.ADMIN],
+            },
+            getPage: {
+                roles: [SystemRole.USER, SystemRole.ADMIN],
+            },
+            create: {
+                roles: [SystemRole.ADMIN],
+            },
+            updateById: {
+                roles: [SystemRole.ADMIN],
+            },
+            deleteById: {
+                roles: [SystemRole.ADMIN],
+            },
+        },
+    },
 ) {
     constructor(private readonly problemsService: ProblemsService) {
         super(problemsService);
     }
 
     @Get("by-sub-topic/:subTopicId")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
     @ApiOperation({
         summary: "Lấy danh sách problems theo sub_topic_id",
         description: "API để lấy tất cả problems thuộc về một sub topic cụ thể",

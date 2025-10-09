@@ -65,7 +65,7 @@ export function BaseControllerFactory<E extends BaseEntity>(
     createDto: ClassType<unknown>,
     updateDto: ClassType<unknown>,
     config: BaseControllerConfig = {
-        authorize: false,
+        authorize: true,
         routes: {
             create: {
                 roles: [SystemRole.ADMIN],

@@ -106,6 +106,12 @@ export class User implements BaseEntity {
     })
     authList?: Auth[];
 
+    @EntityDefinition.field({
+        label: "Student PTIT Code",
+        disableExport: true,
+    })
+    studentPtitCode?: string;
+
     dataPartitionCode?: string;
 }
 
