@@ -24,6 +24,8 @@ import { SubTopicsModule } from "./modules/sub-topics/sub-topics.module";
 import { TestCasesModule } from "./modules/test-cases/test-cases.module";
 import { JudgeNodesModule } from "./modules/judge-nodes/judge-nodes.module";
 import { JudgeNodeLogsModule } from "./modules/judge-node-logs/judge-node-logs.module";
+import { StudentSubmissionsModule } from "./modules/student-submissions/student-submissions.module";
+import { TestCaseResultsModule } from "./modules/test-case-results/test-case-results.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -50,6 +52,8 @@ import { JudgeNodeLogsModule } from "./modules/judge-node-logs/judge-node-logs.m
         TestCasesModule,
         JudgeNodesModule,
         JudgeNodeLogsModule,
+        StudentSubmissionsModule,
+        TestCaseResultsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
