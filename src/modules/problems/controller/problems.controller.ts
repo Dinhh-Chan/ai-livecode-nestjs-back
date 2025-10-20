@@ -84,21 +84,6 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         });
     }
 
-    @BaseRouteSetup("getById", { authorize: false }, "get")
-    @ApiRecordResponse(Problems)
-    async getById(@ReqUser() user: User, @Param("id") id: string) {
-        const population: PopulationDto<Problems>[] = [
-            { path: "topic" },
-            { path: "sub_topic" },
-            {
-                path: "test_cases",
-                condition: { is_public: true },
-                hasMany: true,
-            },
-        ];
-        return this.problemsService.getById(user, id, { population });
-    }
-
     @BaseRouteSetup("getPage", { authorize: false }, "get")
     @ApiListResponse(Problems)
     @ApiCondition()
@@ -121,6 +106,21 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             ...query,
             population,
         });
+    }
+
+    @BaseRouteSetup("getById", { authorize: false }, "get")
+    @ApiRecordResponse(Problems)
+    async getById(@ReqUser() user: User, @Param("id") id: string) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+        return this.problemsService.getById(user, id, { population });
     }
 
     @Get("by-sub-topic/:subTopicId")
