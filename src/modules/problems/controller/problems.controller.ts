@@ -35,9 +35,16 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     }
 
     // Override các method để sử dụng population
-    @BaseRouteSetup("getById", { authorize: false }, "get")
-    @ApiRecordResponse(Problems)
-    async getById(@ReqUser() user: User, @Param("id") id: string) {
+    // Đặt getMany trước getById để tránh route conflict
+    @BaseRouteSetup("getMany", { authorize: false }, "get")
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet({ mode: "many" })
+    async getMany(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<Problems>,
+    ) {
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -47,7 +54,10 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getById(user, id, { population });
+        return this.problemsService.getMany(user, conditions, {
+            ...query,
+            population,
+        });
     }
 
     @BaseRouteSetup("getOne", { authorize: false }, "get")
@@ -74,15 +84,9 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         });
     }
 
-    @BaseRouteSetup("getMany", { authorize: false }, "get")
-    @ApiListResponse(Problems)
-    @ApiCondition()
-    @ApiGet({ mode: "many" })
-    async getMany(
-        @ReqUser() user: User,
-        @RequestCondition(ConditionProblemsDto) conditions: any,
-        @RequestQuery() query: GetManyQuery<Problems>,
-    ) {
+    @BaseRouteSetup("getById", { authorize: false }, "get")
+    @ApiRecordResponse(Problems)
+    async getById(@ReqUser() user: User, @Param("id") id: string) {
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -92,10 +96,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(user, conditions, {
-            ...query,
-            population,
-        });
+        return this.problemsService.getById(user, id, { population });
     }
 
     @BaseRouteSetup("getPage", { authorize: false }, "get")
