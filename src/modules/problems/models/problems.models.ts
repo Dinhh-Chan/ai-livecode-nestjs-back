@@ -6,6 +6,7 @@ import {
     Column,
     DataType,
     ForeignKey,
+    HasMany,
     Model,
     Table,
 } from "sequelize-typescript";
@@ -14,6 +15,8 @@ import { Topics } from "../../topics/entities/topics.entity";
 import { SubTopics } from "../../sub-topics/entities/sub-topics.entity";
 import { TopicsModel } from "../../topics/models/topics.models";
 import { SubTopicsModel } from "../../sub-topics/models/sub-topics.models";
+import { TestCases } from "../../test-cases/entities/test-cases.entity";
+import { TestCasesModel } from "../../test-cases/models/test-cases.models";
 
 @Table({
     tableName: Entity.PROBLEMS,
@@ -154,5 +157,9 @@ export class ProblemsModel extends Model implements Problems {
     })
     sub_topic?: SubTopics;
 
-    test_cases?: any[];
+    @HasMany(() => TestCasesModel, {
+        sourceKey: "_id",
+        foreignKey: "problem_id",
+    })
+    test_cases?: TestCases[];
 }
