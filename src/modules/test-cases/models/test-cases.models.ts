@@ -1,16 +1,7 @@
 import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
-import {
-    BelongsTo,
-    Column,
-    DataType,
-    ForeignKey,
-    Model,
-    Table,
-} from "sequelize-typescript";
+import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { TestCases } from "../entities/test-cases.entity";
-import { ProblemsModel } from "@module/problems/models/problems.models";
-import { Problems } from "@module/problems/entities/problems.entity";
 
 @Table({
     tableName: Entity.TEST_CASES,
@@ -30,7 +21,6 @@ export class TestCasesModel extends Model implements TestCases {
         allowNull: false,
         field: "_problem_id",
     })
-    @ForeignKey(() => ProblemsModel)
     problem_id: string;
 
     @Column({
@@ -64,9 +54,5 @@ export class TestCasesModel extends Model implements TestCases {
     order_index: number;
 
     // Virtual fields for relationships
-    @BelongsTo(() => ProblemsModel, {
-        targetKey: "_id",
-        foreignKey: "problem_id",
-    })
-    problem?: Problems;
+    problem?: any;
 }
