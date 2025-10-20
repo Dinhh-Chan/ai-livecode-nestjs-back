@@ -6,4 +6,7 @@ export enum Gender {
 export enum SystemRole {
     ADMIN = "Admin",
     USER = "User",
+    STUDENT = "Student",
+    TEACHER = "Teacher",
+    OTHER = "Other",
 }

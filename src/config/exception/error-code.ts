@@ -20,4 +20,12 @@ export type ErrorCode =
     | "error-file-not-found"
     | "error-import-transaction-empty"
     | "error-quy-tac-not-found"
+    | "error-course-not-found"
+    | "error-not-course-teacher"
+    | "error-not-main-teacher"
+    | "error-invalid-course-code"
+    | "error-course-not-active"
+    | "error-not-course-member"
+    | "error-student-already-enrolled"
+    | "error-teacher-already-assigned"
     | FileErrorCode;

@@ -27,3 +27,8 @@ export const JUDGE_NODES = "JudgeNodes";
 export const STUDENT_SUBMISSIONS = "StudentSubmissions";
 export const TEST_CASE_RESULTS = "TestCaseResults";
 export const JUDGE_NODE_LOGS = "JudgeNodeLogs";
+
+// Courses entities
+export const COURSES = "Courses";
+export const COURSE_STUDENT = "CourseStudent";
+export const COURSE_TEACHER = "CourseTeacher";
