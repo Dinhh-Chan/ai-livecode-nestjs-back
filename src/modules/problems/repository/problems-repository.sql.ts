@@ -8,6 +8,11 @@ import { PopulationDto } from "@common/dto/population.dto";
 const commonPopulate: PopulationDto<Problems>[] = [
     { path: "topic" },
     { path: "sub_topic" },
+    {
+        path: "test_cases",
+        condition: { is_public: true },
+        hasMany: true,
+    },
 ];
 
 export class ProblemsRepositorySql
