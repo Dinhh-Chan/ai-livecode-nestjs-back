@@ -5,7 +5,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
-import { GetManyQuery } from "@common/constant";
+import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { BaseQueryOption } from "@module/repository/common/base-repository.interface";
 
 @Injectable()
@@ -29,5 +29,26 @@ export class SubTopicsService extends BaseService<
         query?: GetManyQuery<SubTopics> & BaseQueryOption<unknown>,
     ) {
         return this.getMany(user, { topic_id: topicId }, query);
+    }
+    async getPage(
+        user: User,
+        conditions: any,
+        query: GetPageQuery<SubTopics>,
+    ): Promise<any> {
+        const queryWithDefaultSort = {
+            ...query,
+            sort: query.sort || { sub_topic_name: 1 },
+        };
+    }
+    async getMany(
+        user: User,
+        conditions: any,
+        query: GetManyQuery<SubTopics>,
+    ): Promise<SubTopics[]> {
+        const queryWithDefaultSort = {
+            ...query,
+            sort: query.sort || { sub_topic_name: 1 },
+        };
+        return super.getMany(user, conditions, queryWithDefaultSort);
     }
 }
