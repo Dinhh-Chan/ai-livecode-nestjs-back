@@ -2,13 +2,21 @@ import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
 import {
     AllowNull,
+    BelongsTo,
     Column,
     DataType,
+    ForeignKey,
+    HasMany,
     Model,
     Table,
 } from "sequelize-typescript";
 import { Problems, ProblemDifficulty } from "../entities/problems.entity";
-import { all } from "axios";
+import { Topics } from "../../topics/entities/topics.entity";
+import { SubTopics } from "../../sub-topics/entities/sub-topics.entity";
+import { TopicsModel } from "../../topics/models/topics.models";
+import { SubTopicsModel } from "../../sub-topics/models/sub-topics.models";
+import { TestCases } from "../../test-cases/entities/test-cases.entity";
+import { TestCasesModel } from "../../test-cases/models/test-cases.models";
 
 @Table({
     tableName: Entity.PROBLEMS,
@@ -28,6 +36,7 @@ export class ProblemsModel extends Model implements Problems {
         allowNull: true,
         field: "_topic_id",
     })
+    @ForeignKey(() => TopicsModel)
     topic_id?: string;
 
     @Column({
@@ -35,6 +44,7 @@ export class ProblemsModel extends Model implements Problems {
         allowNull: true,
         field: "_sub_topic_id",
     })
+    @ForeignKey(() => SubTopicsModel)
     sub_topic_id?: string;
 
     @Column({
@@ -135,7 +145,21 @@ export class ProblemsModel extends Model implements Problems {
     steps?: string;
 
     // Virtual fields for relationships
-    topic?: any;
-    sub_topic?: any;
-    test_cases?: any[];
+    @BelongsTo(() => TopicsModel, {
+        targetKey: "_id",
+        foreignKey: "topic_id",
+    })
+    topic?: Topics;
+
+    @BelongsTo(() => SubTopicsModel, {
+        targetKey: "_id",
+        foreignKey: "sub_topic_id",
+    })
+    sub_topic?: SubTopics;
+
+    @HasMany(() => TestCasesModel, {
+        sourceKey: "_id",
+        foreignKey: "problem_id",
+    })
+    test_cases?: TestCases[];
 }

@@ -6,11 +6,22 @@ import { UpdateProblemsDto } from "../dto/update-problems.dto";
 import { Controller, Get, Param } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
-import { GetManyQuery } from "@common/constant";
 import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
-import { RequestQuery } from "@common/decorator/query.decorator";
-import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
+import { GetManyQuery, GetOneQuery } from "@common/constant";
+import {
+    RequestQuery,
+    RequestCondition,
+} from "@common/decorator/query.decorator";
+import { User } from "@module/user/entities/user.entity";
+import {
+    ApiCondition,
+    ApiGet,
+    ApiListResponse,
+    ApiRecordResponse,
+} from "@common/decorator/api.decorator";
+import { BaseRouteSetup } from "@config/controller/base-controller.decorator";
+import { PopulationDto } from "@common/dto/population.dto";
 
 @Controller("problems")
 @ApiTags("Problems")
@@ -45,6 +56,95 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
 ) {
     constructor(private readonly problemsService: ProblemsService) {
         super(problemsService);
+    }
+
+    // Override các method để sử dụng population
+    // Đặt getMany trước getById để tránh route conflict
+    @BaseRouteSetup("getMany", { authorize: false }, "get")
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet({ mode: "many" })
+    async getMany(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<Problems>,
+    ) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+        return this.problemsService.getMany(user, conditions, {
+            ...query,
+            population,
+        });
+    }
+
+    @BaseRouteSetup("getOne", { authorize: false }, "get")
+    @ApiRecordResponse(Problems)
+    @ApiCondition()
+    @ApiGet({ mode: "one" })
+    async getOne(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetOneQuery<Problems>,
+    ) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+        return this.problemsService.getOne(user, conditions, {
+            ...query,
+            population,
+        });
+    }
+
+    @BaseRouteSetup("getPage", { authorize: false }, "get")
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet()
+    async getPage(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<Problems>,
+    ) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+        return this.problemsService.getPage(user, conditions, {
+            ...query,
+            population,
+        });
+    }
+
+    @BaseRouteSetup("getById", { authorize: false }, "get")
+    @ApiRecordResponse(Problems)
+    async getById(@ReqUser() user: User, @Param("id") id: string) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+        return this.problemsService.getById(user, id, { population });
     }
 
     @Get("by-sub-topic/:subTopicId")
@@ -102,10 +202,19 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @Param("subTopicId") subTopicId: string,
         @RequestQuery() query: GetManyQuery<Problems>,
     ) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
         return this.problemsService.getMany(
             user,
             { sub_topic_id: subTopicId },
-            query,
+            { ...query, population },
         );
     }
 }
