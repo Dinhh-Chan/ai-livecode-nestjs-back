@@ -3,11 +3,14 @@ import { StudentSubmissionsService } from "../services/student-submissions.servi
 import { StudentSubmissions } from "../entities/student-submissions.entity";
 import { CreateStudentSubmissionsDto } from "../dto/create-student-submissions.dto";
 import { UpdateStudentSubmissionsDto } from "../dto/update-student-submissions.dto";
-import { Controller } from "@nestjs/common";
-import { ApiTags } from "@nestjs/swagger";
+import { Controller, Post, Get, Param, Body } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ConditionStudentSubmissionsDto } from "../dto/condition-student-submissions.dto";
 import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
+import { ReqUser } from "@common/decorator/auth.decorator";
+import { SubmitCodeDto } from "../dto/submit-code.dto";
+import { SubmissionResponseDto } from "../dto/submission-response.dto";
 
 @Controller("student-submissions")
 @ApiTags("Student Submissions")
@@ -44,5 +47,121 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         private readonly studentSubmissionsService: StudentSubmissionsService,
     ) {
         super(studentSubmissionsService);
+    }
+
+    @Post("submit")
+    @ApiOperation({ summary: "Submit code đến Judge0 và chấm bài" })
+    @ApiResponse({
+        status: 201,
+        description: "Submit thành công",
+        type: SubmissionResponseDto,
+    })
+    async submitCode(
+        @ReqUser() user: User,
+        @Body() dto: SubmitCodeDto,
+    ): Promise<SubmissionResponseDto> {
+        const submission = await this.studentSubmissionsService.submitCode(
+            user,
+            dto,
+        );
+        return submission as SubmissionResponseDto;
+    }
+
+    @Get(":submissionId/result")
+    @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
+    @ApiResponse({
+        status: 200,
+        description: "Kết quả submission",
+        type: SubmissionResponseDto,
+    })
+    async getSubmissionResult(
+        @ReqUser() user: User,
+        @Param("submissionId") submissionId: string,
+    ): Promise<SubmissionResponseDto> {
+        const submission =
+            await this.studentSubmissionsService.getSubmissionResult(
+                submissionId,
+            );
+        return submission as SubmissionResponseDto;
+    }
+
+    @Get("my-submissions")
+    @ApiOperation({ summary: "Lấy danh sách submissions của tôi" })
+    @ApiResponse({
+        status: 200,
+        description: "Danh sách submissions",
+        type: [SubmissionResponseDto],
+    })
+    async getMySubmissions(
+        @ReqUser() user: User,
+    ): Promise<SubmissionResponseDto[]> {
+        const submissions =
+            await this.studentSubmissionsService.getSubmissionsByStudent(
+                user._id,
+            );
+        return submissions as SubmissionResponseDto[];
+    }
+
+    @Get("problem/:problemId/submissions")
+    @ApiOperation({ summary: "Lấy danh sách submissions của một bài tập" })
+    @ApiResponse({
+        status: 200,
+        description: "Danh sách submissions",
+        type: [SubmissionResponseDto],
+    })
+    async getProblemSubmissions(
+        @ReqUser() user: User,
+        @Param("problemId") problemId: string,
+    ): Promise<SubmissionResponseDto[]> {
+        const submissions =
+            await this.studentSubmissionsService.getSubmissionsByProblem(
+                problemId,
+            );
+        return submissions as SubmissionResponseDto[];
+    }
+
+    @Get("student/:studentId/submissions")
+    @ApiOperation({ summary: "Lấy danh sách submissions của một sinh viên" })
+    @ApiResponse({
+        status: 200,
+        description: "Danh sách submissions",
+        type: [SubmissionResponseDto],
+    })
+    async getStudentSubmissions(
+        @ReqUser() user: User,
+        @Param("studentId") studentId: string,
+    ): Promise<SubmissionResponseDto[]> {
+        const submissions =
+            await this.studentSubmissionsService.getSubmissionsByStudent(
+                studentId,
+            );
+        return submissions as SubmissionResponseDto[];
+    }
+
+    @Get("stats/my-stats")
+    @ApiOperation({ summary: "Lấy thống kê submissions của tôi" })
+    @ApiResponse({
+        status: 200,
+        description: "Thống kê submissions",
+    })
+    async getMyStats(@ReqUser() user: User) {
+        return this.studentSubmissionsService.getStudentSubmissionStats(
+            user._id,
+        );
+    }
+
+    @Get("stats/problem/:problemId")
+    @ApiOperation({ summary: "Lấy thống kê submissions của một bài tập" })
+    @ApiResponse({
+        status: 200,
+        description: "Thống kê submissions",
+    })
+    async getProblemStats(
+        @ReqUser() user: User,
+        @Param("problemId") problemId: string,
+    ) {
+        return this.studentSubmissionsService.getProblemSubmissionStats(
+            problemId,
+        );
     }
 }

@@ -6,12 +6,22 @@ import { Entity } from "@module/repository";
 import { RepositoryProvider } from "@module/repository/common/repository";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { StudentSubmissionsRepositorySql } from "./repository/student-submissions-repository.sql";
+import { Judge0Service } from "@module/judge-nodes/services/judge0.service";
+import { TestCasesModule } from "@module/test-cases/test-cases.module";
+import { ProblemsModule } from "@module/problems/problems.module";
+import { HttpModule } from "@nestjs/axios";
 
 @Module({
-    imports: [SequelizeModule.forFeature([StudentSubmissionsModel])],
+    imports: [
+        SequelizeModule.forFeature([StudentSubmissionsModel]),
+        HttpModule,
+        TestCasesModule,
+        ProblemsModule,
+    ],
     controllers: [StudentSubmissionsController],
     providers: [
         StudentSubmissionsService,
+        Judge0Service,
         RepositoryProvider(
             Entity.STUDENT_SUBMISSIONS,
             StudentSubmissionsRepositorySql,

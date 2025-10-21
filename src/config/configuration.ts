@@ -139,7 +139,7 @@ export default (): Configuration => {
     const microserviceGrpcPort = getEnv("MICROSERVICE_GRPC_PORT", "3001");
 
     const microserviceTcpHost = getEnv("MICROSERVICE_TCP_HOST", "0.0.0.0");
-    const microserviceTcpPort = Number(getEnv("MICROSERVICE_TCP_PORT", "3005"));
+    const microserviceTcpPort = Number(getEnv("MICROSERVICE_TCP_PORT", "3015"));
 
     // Modify to local in core app
     const microserviceTcpHostCore = getEnv("MICROSERVICE_TCP_HOST_CORE");

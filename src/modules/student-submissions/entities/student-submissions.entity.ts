@@ -20,6 +20,15 @@ export enum SubmissionStatus {
     COMPILE_ERROR = "compile_error",
     INTERNAL_ERROR = "internal_error",
     JUDGING = "judging",
+    IN_QUEUE = "in_queue",
+    PROCESSING = "processing",
+    RUNTIME_ERROR_SIGSEGV = "runtime_error_sigsegv",
+    RUNTIME_ERROR_SIGXFSZ = "runtime_error_sigxfsz",
+    RUNTIME_ERROR_SIGFPE = "runtime_error_sigfpe",
+    RUNTIME_ERROR_SIGABRT = "runtime_error_sigabrt",
+    RUNTIME_ERROR_NZEC = "runtime_error_nzec",
+    RUNTIME_ERROR_OTHER = "runtime_error_other",
+    EXEC_FORMAT_ERROR = "exec_format_error",
 }
 
 export enum ProgrammingLanguage {
