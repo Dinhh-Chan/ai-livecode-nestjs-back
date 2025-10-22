@@ -920,18 +920,16 @@ export class StudentSubmissionsService extends BaseService<
         user: User,
         limit: number = 100,
         includeCurrentUser: boolean = true,
-    ): Promise<RankingResponse> {
+    ): Promise<RankingRecord[]> {
         try {
             this.logger.log(`Getting ranking with limit: ${limit}`);
 
-            // Lấy tất cả submissions đã accept
             const acceptedSubmissions =
                 await this.studentSubmissionsRepository.getMany(
                     { status: SubmissionStatus.ACCEPTED },
                     {},
                 );
 
-            // Đếm số bài đã giải của mỗi user
             const userProblemCounts = new Map<string, Set<string>>();
 
             acceptedSubmissions.forEach((submission) => {
@@ -967,9 +965,6 @@ export class StudentSubmissionsService extends BaseService<
             const userIds = rankingData
                 .slice(0, limit)
                 .map((item) => item.userId);
-
-            // Lấy thông tin user từ database (giả sử có UserService)
-            // Trong thực tế, bạn cần inject UserService hoặc UserRepository
             const users = await this.getUsersByIds(userIds);
             const userMap = new Map(users.map((u) => [u._id, u]));
 
@@ -983,24 +978,21 @@ export class StudentSubmissionsService extends BaseService<
                     });
                 }
             });
-
-            // Tìm thứ hạng của user hiện tại
-            let currentUserRank: RankingRecord | undefined;
             if (includeCurrentUser) {
                 const currentUserIndex = rankingData.findIndex(
                     (item) => item.userId === user._id,
                 );
 
-                if (currentUserIndex !== -1) {
+                if (currentUserIndex !== -1 && currentUserIndex >= limit) {
                     const currentUser = await this.getUserById(user._id);
                     if (currentUser) {
-                        currentUserRank = {
+                        topRankings.push({
                             rankNumber: currentUserIndex + 1,
                             user: this.mapUserToRecord(currentUser),
                             totalProblemsSolved:
                                 rankingData[currentUserIndex]
                                     .totalProblemsSolved,
-                        };
+                        });
                     }
                 }
             }
@@ -1009,11 +1001,7 @@ export class StudentSubmissionsService extends BaseService<
                 `Ranking generated with ${topRankings.length} users`,
             );
 
-            return {
-                rankings: topRankings,
-                totalUsers: rankingData.length,
-                currentUserRank,
-            };
+            return topRankings;
         } catch (error) {
             this.logger.error(`Error getting ranking: ${error.message}`);
             throw error;

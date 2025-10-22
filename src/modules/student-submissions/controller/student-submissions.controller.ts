@@ -12,6 +12,7 @@ import { ReqUser } from "@common/decorator/auth.decorator";
 import { SubmitCodeDto } from "../dto/submit-code.dto";
 import { SubmissionResponseDto } from "../dto/submission-response.dto";
 import { RankingResponseDto } from "../dto/ranking-response.dto";
+import { RankingRecordDto } from "../dto/ranking-record.dto";
 
 @Controller("student-submissions")
 @ApiTags("Student Submissions")
@@ -190,20 +191,22 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     @ApiResponse({
         status: 200,
         description: "Bảng xếp hạng thành công",
-        type: RankingResponseDto,
+        type: [RankingRecordDto],
     })
     async getRanking(
         @ReqUser() user: User,
         @Query("limit") limit?: number,
         @Query("includeCurrentUser") includeCurrentUser?: boolean,
-    ): Promise<RankingResponseDto> {
+    ): Promise<RankingRecordDto[]> {
         const rankingLimit = limit || 100;
         const includeUser = includeCurrentUser !== false; // Mặc định là true
 
-        return this.studentSubmissionsService.getRanking(
+        const rankings = await this.studentSubmissionsService.getRanking(
             user,
             rankingLimit,
             includeUser,
         );
+
+        return rankings as unknown as RankingRecordDto[];
     }
 }
