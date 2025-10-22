@@ -18,12 +18,12 @@ export class SubmitCodeDto {
     code: string;
 
     @ApiProperty({
-        description: "Ngôn ngữ lập trình",
-        enum: ProgrammingLanguage,
-        example: ProgrammingLanguage.PYTHON,
+        description: "ID ngôn ngữ lập trình (Judge0 language_id)",
+        example: 71,
+        type: "number",
     })
-    @IsEnum(ProgrammingLanguage)
-    language: ProgrammingLanguage;
+    @IsNumber()
+    language_id: number;
 
     @ApiProperty({
         description: "ID của bài tập",

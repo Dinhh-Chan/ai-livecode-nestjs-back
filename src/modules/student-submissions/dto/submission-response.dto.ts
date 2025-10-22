@@ -24,10 +24,10 @@ export class SubmissionResponseDto {
     code: string;
 
     @ApiProperty({
-        description: "Ngôn ngữ lập trình",
-        enum: ProgrammingLanguage,
+        description: "ID ngôn ngữ lập trình (Judge0 language_id)",
+        example: 71,
     })
-    language: ProgrammingLanguage;
+    language_id: number;
 
     @ApiProperty({
         description: "Trạng thái submission",

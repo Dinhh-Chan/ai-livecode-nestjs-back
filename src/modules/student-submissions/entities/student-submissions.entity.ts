@@ -102,15 +102,15 @@ export class StudentSubmissions implements BaseEntity {
     code: string;
 
     /**
-     * Ngôn ngữ lập trình
+     * ID ngôn ngữ lập trình (Judge0 language_id)
+     * @example 71
      */
-    @IsEnum(ProgrammingLanguage)
+    @IsNumber()
     @EntityDefinition.field({
-        label: "Programming Language",
-        enum: Object.values(ProgrammingLanguage),
-        example: ProgrammingLanguage.PYTHON,
+        label: "Programming Language ID",
+        example: 71,
     })
-    language: ProgrammingLanguage;
+    language_id: number;
 
     /**
      * Trạng thái chấm bài

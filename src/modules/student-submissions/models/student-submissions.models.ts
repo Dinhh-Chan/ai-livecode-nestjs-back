@@ -66,12 +66,12 @@ export class StudentSubmissionsModel
     code: string;
 
     @Column({
-        type: DataType.STRING(20),
+        type: DataType.INTEGER,
         allowNull: false,
-        defaultValue: ProgrammingLanguage.PYTHON,
-        field: "_language",
+        defaultValue: 71, // Python 3.8.1
+        field: "_language_id",
     })
-    language: ProgrammingLanguage;
+    language_id: number;
 
     @Column({
         type: DataType.STRING(50),

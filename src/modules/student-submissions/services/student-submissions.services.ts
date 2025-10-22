@@ -195,7 +195,7 @@ export class StudentSubmissionsService extends BaseService<
             problem_id: string;
             class_id?: string;
             code: string;
-            language: ProgrammingLanguage;
+            language_id: number;
         },
     ): Promise<StudentSubmissions> {
         const submission: Partial<StudentSubmissions> = {
@@ -423,11 +423,12 @@ export class StudentSubmissionsService extends BaseService<
             }
             dailyStats[date].statusCounts[submission.status]++;
 
-            // Đếm theo language
-            if (!dailyStats[date].languageCounts[submission.language]) {
-                dailyStats[date].languageCounts[submission.language] = 0;
+            // Đếm theo language_id
+            const languageKey = `language_${submission.language_id}`;
+            if (!dailyStats[date].languageCounts[languageKey]) {
+                dailyStats[date].languageCounts[languageKey] = 0;
             }
-            dailyStats[date].languageCounts[submission.language]++;
+            dailyStats[date].languageCounts[languageKey]++;
         });
 
         return Object.values(dailyStats).sort((a, b) =>
@@ -463,7 +464,7 @@ export class StudentSubmissionsService extends BaseService<
                 problem_id: dto.problem_id,
                 class_id: dto.class_id,
                 code: dto.code,
-                language: dto.language,
+                language_id: dto.language_id,
             });
 
             // Lấy test cases của problem
@@ -488,9 +489,7 @@ export class StudentSubmissionsService extends BaseService<
                 try {
                     const judge0Request = {
                         source_code: dto.code,
-                        language_id: this.judge0Service.getLanguageId(
-                            dto.language,
-                        ),
+                        language_id: dto.language_id,
                         stdin: testCase.input_data,
                         expected_output: testCase.expected_output,
                         cpu_time_limit:
