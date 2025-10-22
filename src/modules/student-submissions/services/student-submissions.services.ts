@@ -16,7 +16,6 @@ import {
     RankingResponse,
     UserRecord,
 } from "../interfaces/ranking.interface";
-
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
     StudentSubmissions,
@@ -35,8 +34,25 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
+     * Ghi đè getById để trả về submission với thông tin problem đầy đủ
+     */
+    async getById(user: User, id: string, query?: any): Promise<any> {
+        const submission = await this.studentSubmissionsRepository.getById(
+            id,
+            {},
+        );
+        if (!submission) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Làm giàu submission với thông tin user và problem
+        return await this.enrichSubmissionWithDetails(submission, user);
+    }
+
+    /**
      * Lấy submissions theo student ID với thông tin user và problem
      */
+
     async getSubmissionsByStudent(
         user: User,
         studentId: string,
@@ -1062,11 +1078,15 @@ export class StudentSubmissionsService extends BaseService<
             );
 
             // Lấy thông tin problem
+            this.logger.log(
+                `Fetching problem with ID: ${submission.problem_id}`,
+            );
             const problem = await this.problemsService.getById(
                 currentUser,
                 submission.problem_id,
                 {},
             );
+            this.logger.log(`Problem fetched: ${problem ? "success" : "null"}`);
 
             // Tạo object sạch chỉ với dữ liệu cần thiết
             const cleanSubmission = {

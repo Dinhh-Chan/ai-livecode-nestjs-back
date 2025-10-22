@@ -10,12 +10,10 @@ import { HamSinhMaSchema } from "@module/quy-tac-ma/entities/ham-sinh-ma.entity"
 import { QuyTacMaSchema } from "@module/quy-tac-ma/entities/quy-tac-ma.entity";
 import { SettingSchema } from "@module/setting/entities/setting.entity";
 import { TopicSchema } from "@module/topic/entities/topic.entity";
-import { UserSchema } from "@module/user/entities/user.entity";
 import { MongooseModule } from "@nestjs/mongoose";
 import { Schema } from "mongoose";
 
 const SCHEMA_LIST: Schema[] = [
-    UserSchema,
     OneSignalUserSchema,
     NotificationSchema,
     TopicSchema,

@@ -19,6 +19,6 @@ export class UserSqlRepository
         const res = await this.userModel.findOne({
             where: { username: user.username },
         });
-        return res;
+        return res as User;
     }
 }

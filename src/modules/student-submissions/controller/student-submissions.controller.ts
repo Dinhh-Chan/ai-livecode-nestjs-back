@@ -69,6 +69,24 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submission as SubmissionResponseDto;
     }
 
+    @Get(":submissionId")
+    @ApiOperation({ summary: "Lấy thông tin submission theo ID" })
+    @ApiResponse({
+        status: 200,
+        description: "Thông tin submission với problem details",
+        type: SubmissionResponseDto,
+    })
+    async getSubmissionById(
+        @ReqUser() user: User,
+        @Param("submissionId") submissionId: string,
+    ): Promise<SubmissionResponseDto> {
+        const submission = await this.studentSubmissionsService.getById(
+            user,
+            submissionId,
+        );
+        return submission as SubmissionResponseDto;
+    }
+
     @Get(":submissionId/result")
     @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
     @ApiResponse({
