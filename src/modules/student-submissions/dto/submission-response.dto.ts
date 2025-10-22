@@ -61,17 +61,6 @@ export class SubmissionResponseDto {
     judged_at?: Date;
 
     @ApiProperty({
-        description: "Thông tin người dùng",
-    })
-    user?: {
-        _id: string;
-        username: string;
-        email: string;
-        fullname?: string;
-        systemRole: string;
-    };
-
-    @ApiProperty({
         description: "Thông tin bài tập",
     })
     problem?: {

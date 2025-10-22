@@ -55,22 +55,7 @@ export class StudentSubmissionsService extends BaseService<
             }),
         );
 
-        // Lấy thông tin user để thêm vào cuối response
-        const userInfo = await this.getUserById(studentId);
-        const userData = userInfo
-            ? {
-                  _id: userInfo._id,
-                  username: userInfo.username,
-                  email: userInfo.email,
-                  fullname: userInfo.fullname,
-                  systemRole: userInfo.systemRole,
-              }
-            : undefined;
-
-        return {
-            submissions: enrichedSubmissions,
-            user: userData,
-        } as any;
+        return enrichedSubmissions;
     }
 
     /**
@@ -1088,11 +1073,6 @@ export class StudentSubmissionsService extends BaseService<
                 `Enriching submission ${submission._id} with user and problem details`,
             );
 
-            // Lấy thông tin user (có thể khác với currentUser nếu là admin xem submission của student khác)
-            const submissionUser = await this.getUserById(
-                submission.student_id,
-            );
-
             // Lấy thông tin problem
             const problem = await this.problemsService.getById(
                 currentUser,
@@ -1121,15 +1101,6 @@ export class StudentSubmissionsService extends BaseService<
                 judged_at: submission.judged_at,
                 createdAt: (submission as any).createdAt,
                 updatedAt: (submission as any).updatedAt,
-                user: submissionUser
-                    ? {
-                          _id: submissionUser._id,
-                          username: submissionUser.username,
-                          email: submissionUser.email,
-                          fullname: submissionUser.fullname,
-                          systemRole: submissionUser.systemRole,
-                      }
-                    : undefined,
                 problem: problem
                     ? {
                           _id: problem._id,

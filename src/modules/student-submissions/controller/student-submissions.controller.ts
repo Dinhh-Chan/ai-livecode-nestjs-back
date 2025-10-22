@@ -94,13 +94,15 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         description: "Danh sách submissions",
         type: [SubmissionResponseDto],
     })
-    async getMySubmissions(@ReqUser() user: User): Promise<any> {
-        const result =
+    async getMySubmissions(
+        @ReqUser() user: User,
+    ): Promise<SubmissionResponseDto[]> {
+        const submissions =
             await this.studentSubmissionsService.getSubmissionsByStudent(
                 user,
                 user._id,
             );
-        return result;
+        return submissions as SubmissionResponseDto[];
     }
 
     @Get("problem/:problemId/submissions")
