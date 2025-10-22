@@ -1,8 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import {
-    SubmissionStatus,
-    ProgrammingLanguage,
-} from "../entities/student-submissions.entity";
+import { SubmissionStatus } from "../entities/student-submissions.entity";
+import { User } from "@module/user/entities/user.entity";
 
 export class SubmissionResponseDto {
     @ApiProperty({ description: "ID của submission" })
@@ -64,4 +62,28 @@ export class SubmissionResponseDto {
         required: false,
     })
     judged_at?: Date;
+
+    @ApiProperty({
+        description: "Thông tin người dùng",
+    })
+    user?: {
+        _id: string;
+        username: string;
+        email: string;
+        fullname?: string;
+        systemRole: string;
+    };
+
+    @ApiProperty({
+        description: "Thông tin bài tập",
+    })
+    problem?: {
+        _id: string;
+        name: string;
+        description: string;
+        difficulty: number;
+        time_limit_ms: number;
+        memory_limit_mb: number;
+        number_of_tests: number;
+    };
 }

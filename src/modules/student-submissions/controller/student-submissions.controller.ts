@@ -3,14 +3,15 @@ import { StudentSubmissionsService } from "../services/student-submissions.servi
 import { StudentSubmissions } from "../entities/student-submissions.entity";
 import { CreateStudentSubmissionsDto } from "../dto/create-student-submissions.dto";
 import { UpdateStudentSubmissionsDto } from "../dto/update-student-submissions.dto";
-import { Controller, Post, Get, Param, Body } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { Controller, Post, Get, Param, Body, Query } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from "@nestjs/swagger";
 import { ConditionStudentSubmissionsDto } from "../dto/condition-student-submissions.dto";
 import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
 import { ReqUser } from "@common/decorator/auth.decorator";
 import { SubmitCodeDto } from "../dto/submit-code.dto";
 import { SubmissionResponseDto } from "../dto/submission-response.dto";
+import { RankingResponseDto } from "../dto/ranking-response.dto";
 
 @Controller("student-submissions")
 @ApiTags("Student Submissions")
@@ -80,6 +81,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     ): Promise<SubmissionResponseDto> {
         const submission =
             await this.studentSubmissionsService.getSubmissionResult(
+                user,
                 submissionId,
             );
         return submission as SubmissionResponseDto;
@@ -162,6 +164,43 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     ) {
         return this.studentSubmissionsService.getProblemSubmissionStats(
             problemId,
+        );
+    }
+
+    @Get("ranking")
+    @ApiOperation({ summary: "Lấy bảng xếp hạng theo số bài đã giải" })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        type: Number,
+        description: "Số lượng người dùng trong bảng xếp hạng (mặc định: 100)",
+        example: 50,
+    })
+    @ApiQuery({
+        name: "includeCurrentUser",
+        required: false,
+        type: Boolean,
+        description:
+            "Có bao gồm thứ hạng của người dùng hiện tại không (mặc định: true)",
+        example: true,
+    })
+    @ApiResponse({
+        status: 200,
+        description: "Bảng xếp hạng thành công",
+        type: RankingResponseDto,
+    })
+    async getRanking(
+        @ReqUser() user: User,
+        @Query("limit") limit?: number,
+        @Query("includeCurrentUser") includeCurrentUser?: boolean,
+    ): Promise<RankingResponseDto> {
+        const rankingLimit = limit || 100;
+        const includeUser = includeCurrentUser !== false; // Mặc định là true
+
+        return this.studentSubmissionsService.getRanking(
+            user,
+            rankingLimit,
+            includeUser,
         );
     }
 }

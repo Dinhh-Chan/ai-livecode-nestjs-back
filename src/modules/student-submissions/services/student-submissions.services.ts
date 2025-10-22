@@ -4,16 +4,18 @@ import { StudentSubmissionsRepository } from "../repository/student-submissions-
 import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
-import {
-    SubmissionStatus,
-    ProgrammingLanguage,
-} from "../entities/student-submissions.entity";
+import { SubmissionStatus } from "../entities/student-submissions.entity";
 import { User } from "@module/user/entities/user.entity";
 import { Judge0Service } from "@module/judge-nodes/services/judge0.service";
 import { SubmitCodeDto } from "../dto/submit-code.dto";
 import { TestCasesService } from "@module/test-cases/services/test-cases.services";
 import { ProblemsService } from "@module/problems/services/problems.services";
 import { ApiError } from "@config/exception/api-error";
+import {
+    RankingRecord,
+    RankingResponse,
+    UserRecord,
+} from "../interfaces/ranking.interface";
 
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
@@ -679,8 +681,12 @@ export class StudentSubmissionsService extends BaseService<
 
             this.logger.log(`Final submission found: ${finalSubmission._id}`);
 
+            // Lấy thông tin user và problem để thêm vào response
+            const submissionWithDetails =
+                await this.enrichSubmissionWithDetails(finalSubmission, user);
+
             this.logger.log(`Submission ${submissionId} created successfully`);
-            return finalSubmission;
+            return submissionWithDetails;
         } catch (error) {
             this.logger.error(`Error in submitCode: ${error.message}`);
             this.logger.error(`Error stack: ${error.stack}`);
@@ -803,6 +809,7 @@ export class StudentSubmissionsService extends BaseService<
      * Lấy kết quả submission từ Judge0 (cho manual polling)
      */
     async getSubmissionResult(
+        user: User,
         submissionId: string,
     ): Promise<StudentSubmissions> {
         // Note: Cần User object để gọi getById, nhưng method này không có User parameter
@@ -847,18 +854,231 @@ export class StudentSubmissionsService extends BaseService<
                         undefined,
                 });
 
-                return this.studentSubmissionsRepository.getById(
-                    submissionId,
-                    {},
+                const updatedSubmission =
+                    await this.studentSubmissionsRepository.getById(
+                        submissionId,
+                        {},
+                    );
+
+                // Làm giàu submission với thông tin user và problem
+                return await this.enrichSubmissionWithDetails(
+                    updatedSubmission,
+                    user,
                 );
             }
 
-            return submission;
+            // Làm giàu submission với thông tin user và problem
+            return await this.enrichSubmissionWithDetails(submission, user);
         } catch (error) {
             this.logger.error(
                 `Error getting submission result: ${error.message}`,
             );
             throw error;
+        }
+    }
+
+    /**
+     * Lấy bảng xếp hạng theo số bài đã giải
+     */
+    async getRanking(
+        user: User,
+        limit: number = 100,
+        includeCurrentUser: boolean = true,
+    ): Promise<RankingResponse> {
+        try {
+            this.logger.log(`Getting ranking with limit: ${limit}`);
+
+            // Lấy tất cả submissions đã accept
+            const acceptedSubmissions =
+                await this.studentSubmissionsRepository.getMany(
+                    { status: SubmissionStatus.ACCEPTED },
+                    {},
+                );
+
+            // Đếm số bài đã giải của mỗi user
+            const userProblemCounts = new Map<string, Set<string>>();
+
+            acceptedSubmissions.forEach((submission) => {
+                const userId = submission.student_id;
+                const problemId = submission.problem_id;
+
+                if (!userProblemCounts.has(userId)) {
+                    userProblemCounts.set(userId, new Set());
+                }
+                userProblemCounts.get(userId)!.add(problemId);
+            });
+
+            // Tạo danh sách ranking
+            const rankingData: Array<{
+                userId: string;
+                totalProblemsSolved: number;
+            }> = [];
+
+            userProblemCounts.forEach((problemIds, userId) => {
+                rankingData.push({
+                    userId,
+                    totalProblemsSolved: problemIds.size,
+                });
+            });
+
+            // Sắp xếp theo số bài đã giải (giảm dần)
+            rankingData.sort(
+                (a, b) => b.totalProblemsSolved - a.totalProblemsSolved,
+            );
+
+            // Lấy thông tin user cho top rankings
+            const topRankings: RankingRecord[] = [];
+            const userIds = rankingData
+                .slice(0, limit)
+                .map((item) => item.userId);
+
+            // Lấy thông tin user từ database (giả sử có UserService)
+            // Trong thực tế, bạn cần inject UserService hoặc UserRepository
+            const users = await this.getUsersByIds(userIds);
+            const userMap = new Map(users.map((u) => [u._id, u]));
+
+            rankingData.slice(0, limit).forEach((item, index) => {
+                const userData = userMap.get(item.userId);
+                if (userData) {
+                    topRankings.push({
+                        rankNumber: index + 1,
+                        user: this.mapUserToRecord(userData),
+                        totalProblemsSolved: item.totalProblemsSolved,
+                    });
+                }
+            });
+
+            // Tìm thứ hạng của user hiện tại
+            let currentUserRank: RankingRecord | undefined;
+            if (includeCurrentUser) {
+                const currentUserIndex = rankingData.findIndex(
+                    (item) => item.userId === user._id,
+                );
+
+                if (currentUserIndex !== -1) {
+                    const currentUser = await this.getUserById(user._id);
+                    if (currentUser) {
+                        currentUserRank = {
+                            rankNumber: currentUserIndex + 1,
+                            user: this.mapUserToRecord(currentUser),
+                            totalProblemsSolved:
+                                rankingData[currentUserIndex]
+                                    .totalProblemsSolved,
+                        };
+                    }
+                }
+            }
+
+            this.logger.log(
+                `Ranking generated with ${topRankings.length} users`,
+            );
+
+            return {
+                rankings: topRankings,
+                totalUsers: rankingData.length,
+                currentUserRank,
+            };
+        } catch (error) {
+            this.logger.error(`Error getting ranking: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Lấy thông tin user theo IDs (placeholder - cần implement)
+     */
+    private async getUsersByIds(userIds: string[]): Promise<User[]> {
+        // TODO: Implement this method using UserService or UserRepository
+        // Trong thực tế, bạn cần inject UserService và gọi method tương ứng
+        this.logger.log(`Getting users by IDs: ${userIds.join(", ")}`);
+
+        // Placeholder - trả về empty array
+        // Bạn cần thay thế bằng implementation thực tế
+        return [];
+    }
+
+    /**
+     * Lấy thông tin user theo ID (placeholder - cần implement)
+     */
+    private async getUserById(userId: string): Promise<User | null> {
+        // TODO: Implement this method using UserService or UserRepository
+        this.logger.log(`Getting user by ID: ${userId}`);
+
+        // Placeholder - trả về null
+        // Bạn cần thay thế bằng implementation thực tế
+        return null;
+    }
+
+    /**
+     * Map User entity sang UserRecord
+     */
+    private mapUserToRecord(user: User): UserRecord {
+        return {
+            _id: user._id,
+            username: user.username,
+            email: user.email,
+            fullName: user.fullname, // Sửa từ fullName thành fullname
+            avatar: undefined, // User entity không có avatar field
+            systemRole: user.systemRole,
+            createdAt: new Date(), // User entity không có createdAt field, sử dụng new Date()
+            updatedAt: new Date(), // User entity không có updatedAt field, sử dụng new Date()
+        };
+    }
+
+    /**
+     * Làm giàu submission với thông tin user và problem
+     */
+    private async enrichSubmissionWithDetails(
+        submission: StudentSubmissions,
+        currentUser: User,
+    ): Promise<StudentSubmissions & { user?: any; problem?: any }> {
+        try {
+            this.logger.log(
+                `Enriching submission ${submission._id} with user and problem details`,
+            );
+
+            // Lấy thông tin user (có thể khác với currentUser nếu là admin xem submission của student khác)
+            const submissionUser = await this.getUserById(
+                submission.student_id,
+            );
+
+            // Lấy thông tin problem
+            const problem = await this.problemsService.getById(
+                currentUser,
+                submission.problem_id,
+                {},
+            );
+
+            const enrichedSubmission = {
+                ...submission,
+                user: submissionUser
+                    ? {
+                          _id: submissionUser._id,
+                          username: submissionUser.username,
+                          email: submissionUser.email,
+                          fullname: submissionUser.fullname,
+                          systemRole: submissionUser.systemRole,
+                      }
+                    : undefined,
+                problem: problem
+                    ? {
+                          _id: problem._id,
+                          name: problem.name,
+                          description: problem.description,
+                          difficulty: problem.difficulty,
+                          time_limit_ms: problem.time_limit_ms,
+                          memory_limit_mb: problem.memory_limit_mb,
+                          number_of_tests: problem.number_of_tests,
+                      }
+                    : undefined,
+            };
+
+            this.logger.log(`Submission enriched successfully`);
+            return enrichedSubmission;
+        } catch (error) {
+            this.logger.error(`Error enriching submission: ${error.message}`);
+            // Trả về submission gốc nếu có lỗi
+            return submission;
         }
     }
 }

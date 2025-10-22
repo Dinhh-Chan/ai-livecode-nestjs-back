@@ -1,13 +1,5 @@
-import {
-    IsString,
-    IsEnum,
-    IsOptional,
-    IsNumber,
-    Min,
-    Max,
-} from "class-validator";
+import { IsString, IsOptional, IsNumber, Min, Max } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
-import { ProgrammingLanguage } from "../entities/student-submissions.entity";
 
 export class SubmitCodeDto {
     @ApiProperty({
