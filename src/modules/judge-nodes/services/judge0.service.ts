@@ -106,18 +106,53 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
+            const apiUrl = `${this.baseUrl}/submissions`;
+            this.logger.log(`Sending request to Judge0 API: ${apiUrl}`);
+            this.logger.log(`Request headers: ${JSON.stringify(headers)}`);
+            this.logger.log(`Request language_id: ${request.language_id}`);
+            this.logger.log(
+                `Request source code length: ${request.source_code.length} characters`,
+            );
+
+            if (request.stdin) {
+                this.logger.log(`Request stdin: ${request.stdin}`);
+            }
+
+            if (request.expected_output) {
+                this.logger.log(
+                    `Request expected_output: ${request.expected_output}`,
+                );
+            }
+
             const response = await firstValueFrom(
-                this.httpService.post(`${this.baseUrl}/submissions`, request, {
+                this.httpService.post(apiUrl, request, {
                     headers,
                 }),
             );
 
-            this.logger.log(
-                `Submission sent to Judge0: ${response.data.token}`,
-            );
+            this.logger.log(`Judge0 API response status: ${response.status}`);
+            this.logger.log(`Judge0 submission token: ${response.data.token}`);
+
+            if (response.data.status) {
+                this.logger.log(
+                    `Judge0 initial status: ${JSON.stringify(response.data.status)}`,
+                );
+            }
+
             return response.data;
         } catch (error) {
             this.logger.error(`Error submitting to Judge0: ${error.message}`);
+            this.logger.error(`Error stack: ${error.stack}`);
+
+            if (error.response) {
+                this.logger.error(
+                    `Judge0 error response status: ${error.response.status}`,
+                );
+                this.logger.error(
+                    `Judge0 error response data: ${JSON.stringify(error.response.data)}`,
+                );
+            }
+
             throw new HttpException(
                 "Failed to submit code to Judge0",
                 HttpStatus.BAD_GATEWAY,
@@ -138,17 +173,68 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
+            const apiUrl = `${this.baseUrl}/submissions/${token}`;
+            this.logger.log(
+                `Getting submission result from Judge0 API: ${apiUrl}`,
+            );
+
             const response = await firstValueFrom(
-                this.httpService.get(`${this.baseUrl}/submissions/${token}`, {
+                this.httpService.get(apiUrl, {
                     headers,
                 }),
             );
+
+            this.logger.log(
+                `Judge0 get result API response status: ${response.status}`,
+            );
+
+            if (response.data.status) {
+                this.logger.log(
+                    `Judge0 submission status: ${JSON.stringify(response.data.status)}`,
+                );
+                this.logger.log(
+                    `Judge0 submission time: ${response.data.time || "N/A"}`,
+                );
+                this.logger.log(
+                    `Judge0 submission memory: ${response.data.memory || "N/A"}`,
+                );
+            }
+
+            if (response.data.stdout) {
+                this.logger.log(
+                    `Judge0 submission stdout: ${response.data.stdout}`,
+                );
+            }
+
+            if (response.data.stderr) {
+                this.logger.log(
+                    `Judge0 submission stderr: ${response.data.stderr}`,
+                );
+            }
+
+            if (response.data.compile_output) {
+                this.logger.log(
+                    `Judge0 submission compile_output: ${response.data.compile_output}`,
+                );
+            }
 
             return response.data;
         } catch (error) {
             this.logger.error(
                 `Error getting submission result: ${error.message}`,
             );
+
+            this.logger.error(`Error stack: ${error.stack}`);
+
+            if (error.response) {
+                this.logger.error(
+                    `Judge0 error response status: ${error.response.status}`,
+                );
+                this.logger.error(
+                    `Judge0 error response data: ${JSON.stringify(error.response.data)}`,
+                );
+            }
+
             throw new HttpException(
                 "Failed to get submission result from Judge0",
                 HttpStatus.BAD_GATEWAY,
@@ -192,15 +278,42 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
+            const apiUrl = `${this.baseUrl}/config_info`;
+            this.logger.log(`Getting Judge0 configuration from: ${apiUrl}`);
+
             const response = await firstValueFrom(
-                this.httpService.get(`${this.baseUrl}/config_info`, {
+                this.httpService.get(apiUrl, {
                     headers,
                 }),
+            );
+
+            this.logger.log(
+                `Judge0 config API response status: ${response.status}`,
+            );
+            this.logger.log(
+                `Judge0 version: ${response.data.version || "Unknown"}`,
             );
 
             return response.data;
         } catch (error) {
             this.logger.error(`Error getting configuration: ${error.message}`);
+            this.logger.error(`Error stack: ${error.stack}`);
+
+            if (error.response) {
+                this.logger.error(
+                    `Judge0 error response status: ${error.response.status}`,
+                );
+                this.logger.error(
+                    `Judge0 error response data: ${JSON.stringify(error.response.data || {})}`,
+                );
+            } else if (error.request) {
+                this.logger.error(
+                    "Judge0 no response received - connection issue",
+                );
+            } else {
+                this.logger.error("Judge0 request setup error");
+            }
+
             throw new HttpException(
                 "Failed to get configuration from Judge0",
                 HttpStatus.BAD_GATEWAY,

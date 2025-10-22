@@ -196,8 +196,13 @@ export class StudentSubmissionsService extends BaseService<
             class_id?: string;
             code: string;
             language_id: number;
+            judge_node_id?: string;
         },
     ): Promise<StudentSubmissions> {
+        this.logger.log(
+            `Creating submission with data: ${JSON.stringify(submissionData)}`,
+        );
+
         const submission: Partial<StudentSubmissions> = {
             ...submissionData,
             status: SubmissionStatus.PENDING,
@@ -209,7 +214,22 @@ export class StudentSubmissionsService extends BaseService<
             total_test_cases: 0,
         };
 
-        return this.studentSubmissionsRepository.create(submission);
+        this.logger.log(
+            `Submission object to create: ${JSON.stringify(submission)}`,
+        );
+
+        try {
+            const result =
+                await this.studentSubmissionsRepository.create(submission);
+            this.logger.log(
+                `Submission created successfully: ${JSON.stringify(result)}`,
+            );
+            return result;
+        } catch (error) {
+            this.logger.error(`Error creating submission: ${error.message}`);
+            this.logger.error(`Error stack: ${error.stack}`);
+            throw error;
+        }
     }
 
     /**
@@ -459,6 +479,15 @@ export class StudentSubmissionsService extends BaseService<
 
             // Tạo submission record
             this.logger.log(`Creating submission with ID: ${submissionId}`);
+            this.logger.log(`User ID: ${user._id}`);
+            this.logger.log(`Problem ID: ${dto.problem_id}`);
+            this.logger.log(`Language ID: ${dto.language_id}`);
+            this.logger.log(`Code length: ${dto.code.length} characters`);
+
+            // Tạo judge_node_id giả lập (có thể thay thế bằng logic chọn judge node thực tế)
+            const judgeNodeId = `judge_node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            this.logger.log(`Assigning judge node ID: ${judgeNodeId}`);
+
             const submission = await this.createSubmission(user, {
                 submission_id: submissionId,
                 student_id: user._id,
@@ -466,10 +495,16 @@ export class StudentSubmissionsService extends BaseService<
                 class_id: dto.class_id,
                 code: dto.code,
                 language_id: dto.language_id,
+                judge_node_id: judgeNodeId,
             });
+
             this.logger.log(
-                `Submission created: ${JSON.stringify(submission)}`,
+                `Submission created successfully with ID: ${submission._id}`,
             );
+            this.logger.log(
+                `Submission submission_id: ${submission.submission_id}`,
+            );
+            this.logger.log(`Submission status: ${submission.status}`);
 
             // Lấy test cases của problem
             this.logger.log(
@@ -496,6 +531,43 @@ export class StudentSubmissionsService extends BaseService<
             });
 
             // Gửi submission đến Judge0 cho từng test case
+            this.logger.log(
+                `Sending submission to Judge0 for ${testCases.length} test cases`,
+            );
+
+            try {
+                // Kiểm tra Judge0 service có hoạt động không
+                const judge0Config = await this.judge0Service
+                    .getConfiguration()
+                    .catch((error) => {
+                        this.logger.error(
+                            `Error connecting to Judge0: ${error.message}`,
+                        );
+                        return null;
+                    });
+
+                if (!judge0Config) {
+                    this.logger.error(`Judge0 service is not available`);
+                    // Cập nhật submission status
+                    await this.updateSubmissionResult(submissionId, {
+                        status: SubmissionStatus.INTERNAL_ERROR,
+                        error_message: "Judge0 service is not available",
+                    });
+
+                    // Trả về submission đã tạo
+                    return this.studentSubmissionsRepository.getById(
+                        submissionId,
+                        {},
+                    );
+                }
+
+                this.logger.log(`Judge0 service is available`);
+            } catch (error) {
+                this.logger.error(
+                    `Error checking Judge0 service: ${error.message}`,
+                );
+            }
+
             const judge0Promises = testCases.map(async (testCase, index) => {
                 try {
                     const judge0Request = {
@@ -511,8 +583,14 @@ export class StudentSubmissionsService extends BaseService<
                         command_line_arguments: dto.command_line_arguments,
                     };
 
+                    this.logger.log(
+                        `Submitting test case ${index + 1}/${testCases.length} to Judge0`,
+                    );
                     const judge0Response =
                         await this.judge0Service.submitCode(judge0Request);
+                    this.logger.log(
+                        `Test case ${index + 1} submitted successfully, token: ${judge0Response.token}`,
+                    );
 
                     // Lưu token Judge0
                     await this.updateSubmissionResult(submissionId, {
@@ -538,20 +616,68 @@ export class StudentSubmissionsService extends BaseService<
             const validResults = results.filter((result) => result !== null);
 
             if (validResults.length === 0) {
-                throw ApiError.BadRequest("error-setting-value-invalid");
+                this.logger.error(`No valid Judge0 responses received`);
+                // Cập nhật submission status
+                await this.updateSubmissionResult(submissionId, {
+                    status: SubmissionStatus.INTERNAL_ERROR,
+                    error_message: "Failed to submit code to Judge0",
+                });
+
+                // Trả về submission đã tạo
+                return this.studentSubmissionsRepository.getById(
+                    submissionId,
+                    {},
+                );
             }
+
+            this.logger.log(
+                `Received ${validResults.length}/${testCases.length} valid Judge0 responses`,
+            );
 
             // Polling để lấy kết quả từ Judge0
             await this.pollJudge0Results(submissionId, validResults);
 
-            // Lấy submission đã được tạo
-            const finalSubmission = await this.getById(user, submissionId, {});
+            // Lấy submission đã được tạo trực tiếp từ repository
+            this.logger.log(
+                `Getting submission ${submissionId} after processing`,
+            );
+
+            // Thử lấy bằng submission_id trước
+            let finalSubmission =
+                await this.studentSubmissionsRepository.getOne(
+                    { submission_id: submissionId },
+                    {},
+                );
+
+            if (!finalSubmission) {
+                this.logger.error(
+                    `Submission not found by submission_id: ${submissionId}`,
+                );
+
+                // Thử lấy bằng _id nếu có
+                if (submission && submission._id) {
+                    this.logger.log(
+                        `Trying to get submission by _id: ${submission._id}`,
+                    );
+                    finalSubmission =
+                        await this.studentSubmissionsRepository.getById(
+                            submission._id,
+                            {},
+                        );
+                }
+            }
+
             if (!finalSubmission) {
                 this.logger.error(
                     `Submission ${submissionId} not found after creation`,
                 );
+                this.logger.error(
+                    `Original submission object: ${JSON.stringify(submission)}`,
+                );
                 throw ApiError.BadRequest("error-setting-value-invalid");
             }
+
+            this.logger.log(`Final submission found: ${finalSubmission._id}`);
 
             this.logger.log(`Submission ${submissionId} created successfully`);
             return finalSubmission;
