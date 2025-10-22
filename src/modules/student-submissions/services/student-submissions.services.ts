@@ -35,39 +35,75 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
-     * Lấy submissions theo student ID
+     * Lấy submissions theo student ID với thông tin user và problem
      */
     async getSubmissionsByStudent(
+        user: User,
         studentId: string,
         limit: number = 100,
     ): Promise<StudentSubmissions[]> {
-        return this.studentSubmissionsRepository.findByStudentId(
-            studentId,
-            limit,
+        const submissions =
+            await this.studentSubmissionsRepository.findByStudentId(
+                studentId,
+                limit,
+            );
+
+        // Làm giàu từng submission với thông tin user và problem
+        const enrichedSubmissions = await Promise.all(
+            submissions.map(async (submission) => {
+                return await this.enrichSubmissionWithDetails(submission, user);
+            }),
         );
+
+        return enrichedSubmissions;
     }
 
     /**
-     * Lấy submissions theo problem ID
+     * Lấy submissions theo problem ID với thông tin user và problem
      */
     async getSubmissionsByProblem(
+        user: User,
         problemId: string,
         limit: number = 100,
     ): Promise<StudentSubmissions[]> {
-        return this.studentSubmissionsRepository.findByProblemId(
-            problemId,
-            limit,
+        const submissions =
+            await this.studentSubmissionsRepository.findByProblemId(
+                problemId,
+                limit,
+            );
+
+        // Làm giàu từng submission với thông tin user và problem
+        const enrichedSubmissions = await Promise.all(
+            submissions.map(async (submission) => {
+                return await this.enrichSubmissionWithDetails(submission, user);
+            }),
         );
+
+        return enrichedSubmissions;
     }
 
     /**
-     * Lấy submissions theo class ID
+     * Lấy submissions theo class ID với thông tin user và problem
      */
     async getSubmissionsByClass(
+        user: User,
         classId: string,
         limit: number = 100,
     ): Promise<StudentSubmissions[]> {
-        return this.studentSubmissionsRepository.findByClassId(classId, limit);
+        const submissions =
+            await this.studentSubmissionsRepository.findByClassId(
+                classId,
+                limit,
+            );
+
+        // Làm giàu từng submission với thông tin user và problem
+        const enrichedSubmissions = await Promise.all(
+            submissions.map(async (submission) => {
+                return await this.enrichSubmissionWithDetails(submission, user);
+            }),
+        );
+
+        return enrichedSubmissions;
     }
 
     /**

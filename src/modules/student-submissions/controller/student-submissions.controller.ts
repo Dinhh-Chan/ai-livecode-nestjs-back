@@ -99,6 +99,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     ): Promise<SubmissionResponseDto[]> {
         const submissions =
             await this.studentSubmissionsService.getSubmissionsByStudent(
+                user,
                 user._id,
             );
         return submissions as SubmissionResponseDto[];
@@ -117,6 +118,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     ): Promise<SubmissionResponseDto[]> {
         const submissions =
             await this.studentSubmissionsService.getSubmissionsByProblem(
+                user,
                 problemId,
             );
         return submissions as SubmissionResponseDto[];
@@ -135,6 +137,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     ): Promise<SubmissionResponseDto[]> {
         const submissions =
             await this.studentSubmissionsService.getSubmissionsByStudent(
+                user,
                 studentId,
             );
         return submissions as SubmissionResponseDto[];
