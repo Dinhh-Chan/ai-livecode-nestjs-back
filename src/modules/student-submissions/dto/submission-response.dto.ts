@@ -12,9 +12,6 @@ export class SubmissionResponseDto {
     @ApiProperty({ description: "ID của sinh viên" })
     student_id: string;
 
-    @ApiProperty({ description: "ID của bài tập" })
-    problem_id: string;
-
     @ApiProperty({ description: "ID của lớp học", required: false })
     class_id?: string;
 

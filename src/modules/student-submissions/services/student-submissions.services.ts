@@ -41,7 +41,7 @@ export class StudentSubmissionsService extends BaseService<
         user: User,
         studentId: string,
         limit: number = 100,
-    ): Promise<StudentSubmissions[]> {
+    ): Promise<any[]> {
         const submissions =
             await this.studentSubmissionsRepository.findByStudentId(
                 studentId,
@@ -55,7 +55,22 @@ export class StudentSubmissionsService extends BaseService<
             }),
         );
 
-        return enrichedSubmissions;
+        // Lấy thông tin user để thêm vào cuối response
+        const userInfo = await this.getUserById(studentId);
+        const userData = userInfo
+            ? {
+                  _id: userInfo._id,
+                  username: userInfo.username,
+                  email: userInfo.email,
+                  fullname: userInfo.fullname,
+                  systemRole: userInfo.systemRole,
+              }
+            : undefined;
+
+        return {
+            submissions: enrichedSubmissions,
+            user: userData,
+        } as any;
     }
 
     /**
@@ -65,7 +80,7 @@ export class StudentSubmissionsService extends BaseService<
         user: User,
         problemId: string,
         limit: number = 100,
-    ): Promise<StudentSubmissions[]> {
+    ): Promise<any[]> {
         const submissions =
             await this.studentSubmissionsRepository.findByProblemId(
                 problemId,
@@ -89,7 +104,7 @@ export class StudentSubmissionsService extends BaseService<
         user: User,
         classId: string,
         limit: number = 100,
-    ): Promise<StudentSubmissions[]> {
+    ): Promise<any[]> {
         const submissions =
             await this.studentSubmissionsRepository.findByClassId(
                 classId,
@@ -1067,7 +1082,7 @@ export class StudentSubmissionsService extends BaseService<
     private async enrichSubmissionWithDetails(
         submission: StudentSubmissions,
         currentUser: User,
-    ): Promise<StudentSubmissions & { user?: any; problem?: any }> {
+    ): Promise<any> {
         try {
             this.logger.log(
                 `Enriching submission ${submission._id} with user and problem details`,
@@ -1085,8 +1100,27 @@ export class StudentSubmissionsService extends BaseService<
                 {},
             );
 
-            const enrichedSubmission = {
-                ...submission,
+            // Tạo object sạch chỉ với dữ liệu cần thiết
+            const cleanSubmission = {
+                _id: submission._id,
+                submission_id: submission.submission_id,
+                student_id: submission.student_id,
+                class_id: submission.class_id,
+                judge_node_id: submission.judge_node_id,
+                code: submission.code,
+                language_id: submission.language_id,
+                status: submission.status,
+                score: submission.score,
+                execution_time_ms: submission.execution_time_ms,
+                memory_used_mb: submission.memory_used_mb,
+                test_cases_passed: submission.test_cases_passed,
+                total_test_cases: submission.total_test_cases,
+                error_message: submission.error_message,
+                submission_token: submission.submission_token,
+                submitted_at: submission.submitted_at,
+                judged_at: submission.judged_at,
+                createdAt: (submission as any).createdAt,
+                updatedAt: (submission as any).updatedAt,
                 user: submissionUser
                     ? {
                           _id: submissionUser._id,
@@ -1110,11 +1144,31 @@ export class StudentSubmissionsService extends BaseService<
             };
 
             this.logger.log(`Submission enriched successfully`);
-            return enrichedSubmission;
+            return cleanSubmission;
         } catch (error) {
             this.logger.error(`Error enriching submission: ${error.message}`);
-            // Trả về submission gốc nếu có lỗi
-            return submission;
+            // Trả về submission gốc nếu có lỗi, nhưng cũng làm sạch
+            return {
+                _id: submission._id,
+                submission_id: submission.submission_id,
+                student_id: submission.student_id,
+                class_id: submission.class_id,
+                judge_node_id: submission.judge_node_id,
+                code: submission.code,
+                language_id: submission.language_id,
+                status: submission.status,
+                score: submission.score,
+                execution_time_ms: submission.execution_time_ms,
+                memory_used_mb: submission.memory_used_mb,
+                test_cases_passed: submission.test_cases_passed,
+                total_test_cases: submission.total_test_cases,
+                error_message: submission.error_message,
+                submission_token: submission.submission_token,
+                submitted_at: submission.submitted_at,
+                judged_at: submission.judged_at,
+                createdAt: (submission as any).createdAt,
+                updatedAt: (submission as any).updatedAt,
+            };
         }
     }
 }
