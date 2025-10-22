@@ -458,6 +458,7 @@ export class StudentSubmissionsService extends BaseService<
             const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             // Tạo submission record
+            this.logger.log(`Creating submission with ID: ${submissionId}`);
             const submission = await this.createSubmission(user, {
                 submission_id: submissionId,
                 student_id: user._id,
@@ -466,15 +467,25 @@ export class StudentSubmissionsService extends BaseService<
                 code: dto.code,
                 language_id: dto.language_id,
             });
+            this.logger.log(
+                `Submission created: ${JSON.stringify(submission)}`,
+            );
 
             // Lấy test cases của problem
+            this.logger.log(
+                `Getting test cases for problem: ${dto.problem_id}`,
+            );
             const testCases = await this.testCasesService.getMany(
                 user,
                 { problem_id: dto.problem_id } as any,
                 {},
             );
+            this.logger.log(`Found ${testCases.length} test cases`);
 
             if (testCases.length === 0) {
+                this.logger.error(
+                    `No test cases found for problem: ${dto.problem_id}`,
+                );
                 throw ApiError.BadRequest("error-setting-value-invalid");
             }
 
@@ -533,9 +544,20 @@ export class StudentSubmissionsService extends BaseService<
             // Polling để lấy kết quả từ Judge0
             await this.pollJudge0Results(submissionId, validResults);
 
-            return this.getById(user, submissionId, {});
+            // Lấy submission đã được tạo
+            const finalSubmission = await this.getById(user, submissionId, {});
+            if (!finalSubmission) {
+                this.logger.error(
+                    `Submission ${submissionId} not found after creation`,
+                );
+                throw ApiError.BadRequest("error-setting-value-invalid");
+            }
+
+            this.logger.log(`Submission ${submissionId} created successfully`);
+            return finalSubmission;
         } catch (error) {
             this.logger.error(`Error in submitCode: ${error.message}`);
+            this.logger.error(`Error stack: ${error.stack}`);
             throw error;
         }
     }
