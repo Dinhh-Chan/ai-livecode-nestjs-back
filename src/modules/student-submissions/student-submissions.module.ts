@@ -10,6 +10,7 @@ import { Judge0Service } from "@module/judge-nodes/services/judge0.service";
 import { TestCasesModule } from "@module/test-cases/test-cases.module";
 import { ProblemsModule } from "@module/problems/problems.module";
 import { HttpModule } from "@nestjs/axios";
+import { UserModule } from "@module/user/user.module";
 
 @Module({
     imports: [
@@ -17,6 +18,7 @@ import { HttpModule } from "@nestjs/axios";
         HttpModule,
         TestCasesModule,
         ProblemsModule,
+        UserModule,
     ],
     controllers: [StudentSubmissionsController],
     providers: [

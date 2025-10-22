@@ -28,7 +28,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
                 roles: [SystemRole.USER, SystemRole.ADMIN],
             },
             getMany: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                enable: false, // Disable để tránh xung đột với route custom
             },
             getPage: {
                 roles: [SystemRole.USER, SystemRole.ADMIN],

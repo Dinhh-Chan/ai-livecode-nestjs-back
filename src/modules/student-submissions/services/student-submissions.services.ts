@@ -16,6 +16,7 @@ import {
     RankingResponse,
     UserRecord,
 } from "../interfaces/ranking.interface";
+import { UserService } from "@module/user/service/user.service";
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
     StudentSubmissions,
@@ -29,6 +30,7 @@ export class StudentSubmissionsService extends BaseService<
         private readonly judge0Service: Judge0Service,
         private readonly testCasesService: TestCasesService,
         private readonly problemsService: ProblemsService,
+        private readonly userService: UserService,
     ) {
         super(studentSubmissionsRepository);
     }
@@ -988,16 +990,22 @@ export class StudentSubmissionsService extends BaseService<
             const users = await this.getUsersByIds(userIds);
             const userMap = new Map(users.map((u) => [u._id, u]));
 
+            // Tạo danh sách ranking cuối cùng
+            const finalRankings: RankingRecord[] = [];
+
+            // Thêm top users
             rankingData.slice(0, limit).forEach((item, index) => {
                 const userData = userMap.get(item.userId);
                 if (userData) {
-                    topRankings.push({
+                    finalRankings.push({
                         rankNumber: index + 1,
                         user: this.mapUserToRecord(userData),
                         totalProblemsSolved: item.totalProblemsSolved,
                     });
                 }
             });
+
+            // Nếu cần include current user và user không nằm trong top
             if (includeCurrentUser) {
                 const currentUserIndex = rankingData.findIndex(
                     (item) => item.userId === user._id,
@@ -1006,8 +1014,8 @@ export class StudentSubmissionsService extends BaseService<
                 if (currentUserIndex !== -1 && currentUserIndex >= limit) {
                     const currentUser = await this.getUserById(user._id);
                     if (currentUser) {
-                        topRankings.push({
-                            rankNumber: currentUserIndex + 1,
+                        finalRankings.push({
+                            rankNumber: currentUserIndex + 1, // Rank thực tế trong toàn bộ danh sách
                             user: this.mapUserToRecord(currentUser),
                             totalProblemsSolved:
                                 rankingData[currentUserIndex]
@@ -1017,11 +1025,14 @@ export class StudentSubmissionsService extends BaseService<
                 }
             }
 
+            // Sắp xếp lại theo rank number để đảm bảo thứ tự đúng
+            finalRankings.sort((a, b) => a.rankNumber - b.rankNumber);
+
             this.logger.log(
-                `Ranking generated with ${topRankings.length} users`,
+                `Ranking generated with ${finalRankings.length} users`,
             );
 
-            return topRankings;
+            return finalRankings;
         } catch (error) {
             this.logger.error(`Error getting ranking: ${error.message}`);
             throw error;
@@ -1029,16 +1040,30 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
-     * Lấy thông tin user theo IDs (placeholder - cần implement)
+     * Lấy thông tin user theo IDs
      */
     private async getUsersByIds(userIds: string[]): Promise<User[]> {
-        // TODO: Implement this method using UserService or UserRepository
-        // Trong thực tế, bạn cần inject UserService và gọi method tương ứng
         this.logger.log(`Getting users by IDs: ${userIds.join(", ")}`);
 
-        // Placeholder - trả về empty array
-        // Bạn cần thay thế bằng implementation thực tế
-        return [];
+        if (userIds.length === 0) {
+            return [];
+        }
+
+        try {
+            // Sử dụng UserService để lấy thông tin users
+            // Với Sequelize, sử dụng Op.in thay vì $in
+            const { Op } = await import("sequelize");
+            const users = await this.userService.getMany(
+                { _id: { [Op.in]: userIds } } as any,
+                {},
+            );
+
+            this.logger.log(`Found ${users.length} users`);
+            return users;
+        } catch (error) {
+            this.logger.error(`Error getting users by IDs: ${error.message}`);
+            return [];
+        }
     }
 
     /**

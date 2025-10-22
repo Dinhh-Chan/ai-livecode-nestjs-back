@@ -57,19 +57,31 @@ export class UserService
         );
         const update = setting || {};
         if (!update.isAdminCreated) {
-            update.isAdminCreated = true;
             const { defaultAdminUsername, defaultAdminPassword } =
                 this.configService.get("server", {
                     infer: true,
                 });
-            await this.userRepository.create({
-                username: defaultAdminUsername,
-                email: "admin@administrator.com",
-                password: await createUserPassword(defaultAdminPassword),
-                systemRole: SystemRole.ADMIN,
-                fullname: "Administrator",
-            });
-            Logger.verbose("Admin created");
+
+            // Kiểm tra xem admin user đã tồn tại chưa
+            const existingAdmin = await this.userRepository.getOne(
+                { username: defaultAdminUsername },
+                { enableDataPartition: false },
+            );
+
+            if (!existingAdmin) {
+                await this.userRepository.create({
+                    username: defaultAdminUsername,
+                    email: "admin@administrator.com",
+                    password: await createUserPassword(defaultAdminPassword),
+                    systemRole: SystemRole.ADMIN,
+                    fullname: "Administrator",
+                });
+                Logger.verbose("Admin created");
+            } else {
+                Logger.verbose("Admin user already exists, skipping creation");
+            }
+
+            update.isAdminCreated = true;
             await this.settingService.setSettingValue(
                 SettingKey.INIT_DATA,
                 update,
