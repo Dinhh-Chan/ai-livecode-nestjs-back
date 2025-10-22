@@ -69,43 +69,6 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submission as SubmissionResponseDto;
     }
 
-    @Get(":submissionId")
-    @ApiOperation({ summary: "Lấy thông tin submission theo ID" })
-    @ApiResponse({
-        status: 200,
-        description: "Thông tin submission với problem details",
-        type: SubmissionResponseDto,
-    })
-    async getSubmissionById(
-        @ReqUser() user: User,
-        @Param("submissionId") submissionId: string,
-    ): Promise<SubmissionResponseDto> {
-        const submission = await this.studentSubmissionsService.getById(
-            user,
-            submissionId,
-        );
-        return submission as SubmissionResponseDto;
-    }
-
-    @Get(":submissionId/result")
-    @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
-    @ApiResponse({
-        status: 200,
-        description: "Kết quả submission",
-        type: SubmissionResponseDto,
-    })
-    async getSubmissionResult(
-        @ReqUser() user: User,
-        @Param("submissionId") submissionId: string,
-    ): Promise<SubmissionResponseDto> {
-        const submission =
-            await this.studentSubmissionsService.getSubmissionResult(
-                user,
-                submissionId,
-            );
-        return submission as SubmissionResponseDto;
-    }
-
     @Get("my-submissions")
     @ApiOperation({ summary: "Lấy danh sách submissions của tôi" })
     @ApiResponse({
@@ -122,6 +85,72 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
                 user._id,
             );
         return submissions as SubmissionResponseDto[];
+    }
+
+    @Get("ranking")
+    @ApiOperation({ summary: "Lấy bảng xếp hạng theo số bài đã giải" })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        type: Number,
+        description: "Số lượng người dùng trong bảng xếp hạng (mặc định: 100)",
+        example: 50,
+    })
+    @ApiQuery({
+        name: "includeCurrentUser",
+        required: false,
+        type: Boolean,
+        description:
+            "Có bao gồm thứ hạng của người dùng hiện tại không (mặc định: true)",
+        example: true,
+    })
+    @ApiResponse({
+        status: 200,
+        description: "Bảng xếp hạng thành công",
+        type: [RankingRecordDto],
+    })
+    async getRanking(
+        @ReqUser() user: User,
+        @Query("limit") limit?: number,
+        @Query("includeCurrentUser") includeCurrentUser?: boolean,
+    ): Promise<RankingRecordDto[]> {
+        const rankingLimit = limit || 100;
+        const includeUser = includeCurrentUser !== false; // Mặc định là true
+
+        const rankings = await this.studentSubmissionsService.getRanking(
+            user,
+            rankingLimit,
+            includeUser,
+        );
+
+        return rankings as unknown as RankingRecordDto[];
+    }
+
+    @Get("stats/my-stats")
+    @ApiOperation({ summary: "Lấy thống kê submissions của tôi" })
+    @ApiResponse({
+        status: 200,
+        description: "Thống kê submissions",
+    })
+    async getMyStats(@ReqUser() user: User) {
+        return this.studentSubmissionsService.getStudentSubmissionStats(
+            user._id,
+        );
+    }
+
+    @Get("stats/problem/:problemId")
+    @ApiOperation({ summary: "Lấy thống kê submissions của một bài tập" })
+    @ApiResponse({
+        status: 200,
+        description: "Thống kê submissions",
+    })
+    async getProblemStats(
+        @ReqUser() user: User,
+        @Param("problemId") problemId: string,
+    ) {
+        return this.studentSubmissionsService.getProblemSubmissionStats(
+            problemId,
+        );
     }
 
     @Get("problem/:problemId/submissions")
@@ -162,69 +191,40 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submissions as SubmissionResponseDto[];
     }
 
-    @Get("stats/my-stats")
-    @ApiOperation({ summary: "Lấy thống kê submissions của tôi" })
+    @Get(":submissionId/result")
+    @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
     @ApiResponse({
         status: 200,
-        description: "Thống kê submissions",
+        description: "Kết quả submission",
+        type: SubmissionResponseDto,
     })
-    async getMyStats(@ReqUser() user: User) {
-        return this.studentSubmissionsService.getStudentSubmissionStats(
-            user._id,
-        );
+    async getSubmissionResult(
+        @ReqUser() user: User,
+        @Param("submissionId") submissionId: string,
+    ): Promise<SubmissionResponseDto> {
+        const submission =
+            await this.studentSubmissionsService.getSubmissionResult(
+                user,
+                submissionId,
+            );
+        return submission as SubmissionResponseDto;
     }
 
-    @Get("stats/problem/:problemId")
-    @ApiOperation({ summary: "Lấy thống kê submissions của một bài tập" })
+    @Get(":submissionId")
+    @ApiOperation({ summary: "Lấy thông tin submission theo ID" })
     @ApiResponse({
         status: 200,
-        description: "Thống kê submissions",
+        description: "Thông tin submission với problem details",
+        type: SubmissionResponseDto,
     })
-    async getProblemStats(
+    async getSubmissionById(
         @ReqUser() user: User,
-        @Param("problemId") problemId: string,
-    ) {
-        return this.studentSubmissionsService.getProblemSubmissionStats(
-            problemId,
-        );
-    }
-
-    @Get("ranking")
-    @ApiOperation({ summary: "Lấy bảng xếp hạng theo số bài đã giải" })
-    @ApiQuery({
-        name: "limit",
-        required: false,
-        type: Number,
-        description: "Số lượng người dùng trong bảng xếp hạng (mặc định: 100)",
-        example: 50,
-    })
-    @ApiQuery({
-        name: "includeCurrentUser",
-        required: false,
-        type: Boolean,
-        description:
-            "Có bao gồm thứ hạng của người dùng hiện tại không (mặc định: true)",
-        example: true,
-    })
-    @ApiResponse({
-        status: 200,
-        description: "Bảng xếp hạng thành công",
-        type: [RankingRecordDto],
-    })
-    async getRanking(
-        @ReqUser() user: User,
-        @Query("limit") limit?: number,
-        @Query("includeCurrentUser") includeCurrentUser?: boolean,
-    ): Promise<RankingRecordDto[]> {
-        const rankingLimit = limit || 100;
-        const includeUser = includeCurrentUser !== false; // Mặc định là true
-
-        const rankings = await this.studentSubmissionsService.getRanking(
+        @Param("submissionId") submissionId: string,
+    ): Promise<SubmissionResponseDto> {
+        const submission = await this.studentSubmissionsService.getById(
             user,
-            rankingLimit,
-            includeUser,
+            submissionId,
         );
-
-        return rankings as unknown as RankingRecordDto[];
+        return submission as SubmissionResponseDto;
     }
 }

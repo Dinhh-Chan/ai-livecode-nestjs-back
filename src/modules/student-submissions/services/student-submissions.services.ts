@@ -37,11 +37,14 @@ export class StudentSubmissionsService extends BaseService<
      * Ghi đè getById để trả về submission với thông tin problem đầy đủ
      */
     async getById(user: User, id: string, query?: any): Promise<any> {
+        this.logger.log(`Getting submission by ID: ${id}`);
         const submission = await this.studentSubmissionsRepository.getById(
             id,
             {},
         );
+        this.logger.log(`Submission found: ${submission ? "yes" : "no"}`);
         if (!submission) {
+            this.logger.error(`Submission not found with ID: ${id}`);
             throw ApiError.NotFound("error-user-not-found");
         }
 
