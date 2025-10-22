@@ -154,10 +154,12 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     }
 
     @Get("problem/:problemId/submissions")
-    @ApiOperation({ summary: "Lấy danh sách submissions của một bài tập" })
+    @ApiOperation({
+        summary: "Lấy danh sách submissions của tôi cho một bài tập cụ thể",
+    })
     @ApiResponse({
         status: 200,
-        description: "Danh sách submissions",
+        description: "Danh sách submissions của user hiện tại cho bài tập",
         type: [SubmissionResponseDto],
     })
     async getProblemSubmissions(

@@ -78,7 +78,7 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
-     * Lấy submissions theo problem ID với thông tin user và problem
+     * Lấy submissions của user hiện tại theo problem ID với thông tin user và problem
      */
     async getSubmissionsByProblem(
         user: User,
@@ -86,7 +86,8 @@ export class StudentSubmissionsService extends BaseService<
         limit: number = 100,
     ): Promise<any[]> {
         const submissions =
-            await this.studentSubmissionsRepository.findByProblemId(
+            await this.studentSubmissionsRepository.findByStudentAndProblem(
+                user._id,
                 problemId,
                 limit,
             );
