@@ -6,7 +6,7 @@ import { UpdateProblemsDto } from "../dto/update-problems.dto";
 import { Controller, Get, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
-import { GetManyQuery, GetOneQuery } from "@common/constant";
+import { GetManyQuery, GetOneQuery, GetPageQuery } from "@common/constant";
 import { ReqUser } from "@common/decorator/auth.decorator";
 import {
     RequestQuery,
@@ -21,6 +21,7 @@ import {
 } from "@common/decorator/api.decorator";
 import { BaseRouteSetup } from "@config/controller/base-controller.decorator";
 import { PopulationDto } from "@common/dto/population.dto";
+import { PageableDto } from "@common/dto/pageable.dto";
 
 @Controller("problems")
 @ApiTags("Problems")
@@ -125,13 +126,26 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
 
     @Get("by-sub-topic/:subTopicId")
     @ApiOperation({
-        summary: "Lấy danh sách problems theo sub_topic_id",
-        description: "API để lấy tất cả problems thuộc về một sub topic cụ thể",
+        summary: "Lấy danh sách problems theo sub_topic_id với pagination",
+        description:
+            "API để lấy problems thuộc về một sub topic cụ thể với hỗ trợ phân trang",
     })
     @ApiParam({
         name: "subTopicId",
         description: "ID của sub topic",
         type: String,
+    })
+    @ApiQuery({
+        name: "page",
+        required: false,
+        description: "Số trang (bắt đầu từ 1)",
+        type: Number,
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng records trên mỗi trang",
+        type: Number,
     })
     @ApiQuery({
         name: "sort",
@@ -144,16 +158,12 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         description: "Thứ tự sắp xếp (asc/desc)",
         enum: ["asc", "desc"],
     })
-    @ApiQuery({
-        name: "limit",
-        required: false,
-        description: "Số lượng records tối đa",
-    })
+    @ApiListResponse(Problems)
     async getProblemsBySubTopic(
         @ReqUser() user: User,
         @Param("subTopicId") subTopicId: string,
-        @RequestQuery() query: GetManyQuery<Problems>,
-    ) {
+        @RequestQuery() query: GetPageQuery<Problems>,
+    ): Promise<PageableDto<Problems>> {
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -163,7 +173,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(
+        return this.problemsService.getPage(
             user,
             { sub_topic_id: subTopicId },
             { ...query, population },
