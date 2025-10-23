@@ -1027,11 +1027,11 @@ export class StudentSubmissionsService extends BaseService<
                 if (currentUserIndex !== -1 && currentUserIndex >= limit) {
                     const currentUser = await this.getUserById(user._id);
                     if (currentUser) {
-                        // Tính rank thực tế cho current user (index + 1)
-                        const actualRank = currentUserIndex + 1;
+                        // Thêm vào cuối danh sách với rankNumber tiếp theo
+                        const nextRank = finalRankings.length + 1;
 
                         finalRankings.push({
-                            rankNumber: actualRank,
+                            rankNumber: nextRank,
                             user: this.mapUserToRecord(currentUser),
                             totalProblemsSolved:
                                 rankingData[currentUserIndex]
@@ -1041,8 +1041,10 @@ export class StudentSubmissionsService extends BaseService<
                 }
             }
 
-            // Sắp xếp lại theo rank number để đảm bảo thứ tự đúng
-            finalRankings.sort((a, b) => a.rankNumber - b.rankNumber);
+            // Đảm bảo rankNumber liên tục từ 1 đến n
+            finalRankings.forEach((ranking, index) => {
+                ranking.rankNumber = index + 1;
+            });
 
             this.logger.log(
                 `Ranking generated with ${finalRankings.length} users`,
