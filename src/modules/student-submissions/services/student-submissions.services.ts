@@ -1002,23 +1002,16 @@ export class StudentSubmissionsService extends BaseService<
 
             // Tạo danh sách ranking cuối cùng với rank đúng (không trùng)
             const finalRankings: RankingRecord[] = [];
-            let currentRank = 1;
 
             // Thêm top users với rank đúng (không trùng, sắp xếp theo tên khi cùng điểm)
             rankingData.slice(0, limit).forEach((item, index) => {
                 const userData = userMap.get(item.userId);
                 if (userData) {
-                    // Nếu là user đầu tiên hoặc điểm khác với user trước đó, cập nhật rank
-                    if (
-                        index === 0 ||
-                        item.totalProblemsSolved !==
-                            rankingData[index - 1].totalProblemsSolved
-                    ) {
-                        currentRank = index + 1;
-                    }
+                    // Rank luôn là index + 1 (không trùng)
+                    const rankNumber = index + 1;
 
                     finalRankings.push({
-                        rankNumber: currentRank,
+                        rankNumber,
                         user: this.mapUserToRecord(userData),
                         totalProblemsSolved: item.totalProblemsSolved,
                     });
