@@ -977,32 +977,44 @@ export class StudentSubmissionsService extends BaseService<
                 });
             });
 
-            // Sắp xếp theo số bài đã giải (giảm dần)
-            rankingData.sort(
-                (a, b) => b.totalProblemsSolved - a.totalProblemsSolved,
-            );
+            // Lấy thông tin user cho tất cả users trước khi sắp xếp
+            const allUserIds = rankingData.map((item) => item.userId);
+            const allUsers = await this.getUsersByIds(allUserIds);
+            const userMap = new Map(allUsers.map((u) => [u._id, u]));
 
-            // Lấy thông tin user cho top rankings
-            const topRankings: RankingRecord[] = [];
-            const userIds = rankingData
-                .slice(0, limit)
-                .map((item) => item.userId);
-            const users = await this.getUsersByIds(userIds);
-            const userMap = new Map(users.map((u) => [u._id, u]));
+            // Sắp xếp theo số bài đã giải (giảm dần), nếu cùng số bài thì sắp xếp theo tên (tăng dần)
+            rankingData.sort((a, b) => {
+                // Ưu tiên sắp xếp theo số bài đã giải (giảm dần)
+                if (b.totalProblemsSolved !== a.totalProblemsSolved) {
+                    return b.totalProblemsSolved - a.totalProblemsSolved;
+                }
 
-            // Tạo danh sách ranking cuối cùng với rank đúng
+                // Nếu cùng số bài, sắp xếp theo tên (tăng dần)
+                const userA = userMap.get(a.userId);
+                const userB = userMap.get(b.userId);
+                const nameA = userA?.fullname || userA?.username || "";
+                const nameB = userB?.fullname || userB?.username || "";
+
+                return nameA.localeCompare(nameB, "vi", {
+                    sensitivity: "base",
+                });
+            });
+
+            // Tạo danh sách ranking cuối cùng với rank đúng (không trùng)
             const finalRankings: RankingRecord[] = [];
             let currentRank = 1;
-            let previousScore = -1;
 
-            // Thêm top users với rank đúng (cùng điểm thì cùng rank)
+            // Thêm top users với rank đúng (không trùng, sắp xếp theo tên khi cùng điểm)
             rankingData.slice(0, limit).forEach((item, index) => {
                 const userData = userMap.get(item.userId);
                 if (userData) {
-                    // Nếu điểm khác với user trước đó, cập nhật rank
-                    if (item.totalProblemsSolved !== previousScore) {
+                    // Nếu là user đầu tiên hoặc điểm khác với user trước đó, cập nhật rank
+                    if (
+                        index === 0 ||
+                        item.totalProblemsSolved !==
+                            rankingData[index - 1].totalProblemsSolved
+                    ) {
                         currentRank = index + 1;
-                        previousScore = item.totalProblemsSolved;
                     }
 
                     finalRankings.push({
@@ -1022,16 +1034,8 @@ export class StudentSubmissionsService extends BaseService<
                 if (currentUserIndex !== -1 && currentUserIndex >= limit) {
                     const currentUser = await this.getUserById(user._id);
                     if (currentUser) {
-                        // Tính rank thực tế cho current user
-                        let actualRank = 1;
-                        for (let i = 0; i < currentUserIndex; i++) {
-                            if (
-                                rankingData[i].totalProblemsSolved !==
-                                rankingData[i + 1].totalProblemsSolved
-                            ) {
-                                actualRank = i + 2;
-                            }
-                        }
+                        // Tính rank thực tế cho current user (index + 1)
+                        const actualRank = currentUserIndex + 1;
 
                         finalRankings.push({
                             rankNumber: actualRank,
