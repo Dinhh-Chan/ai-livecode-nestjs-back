@@ -30,6 +30,8 @@ import { CoursesModule } from "./modules/courses/courses.module";
 import { ClassModule } from "./modules/class/class.module";
 import { ClassStudentsModule } from "./modules/class-students/class-students.module";
 import { ContestsModule } from "./modules/contests/contests.module";
+import { ContestUsersModule } from "./modules/contest-users/contest-users.module";
+import { ContestProblemsModule } from "./modules/contest-problems/contest-problems.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -62,6 +64,8 @@ import { ContestsModule } from "./modules/contests/contests.module";
         ClassModule,
         ClassStudentsModule,
         ContestsModule,
+        ContestUsersModule,
+        ContestProblemsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
