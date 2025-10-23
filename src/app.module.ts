@@ -27,6 +27,8 @@ import { JudgeNodeLogsModule } from "./modules/judge-node-logs/judge-node-logs.m
 import { StudentSubmissionsModule } from "./modules/student-submissions/student-submissions.module";
 import { TestCaseResultsModule } from "./modules/test-case-results/test-case-results.module";
 import { CoursesModule } from "./modules/courses/courses.module";
+import { ClassModule } from "./modules/class/class.module";
+import { ClassStudentsModule } from "./modules/class-students/class-students.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -56,6 +58,8 @@ import { CoursesModule } from "./modules/courses/courses.module";
         StudentSubmissionsModule,
         TestCaseResultsModule,
         CoursesModule,
+        ClassModule,
+        ClassStudentsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],

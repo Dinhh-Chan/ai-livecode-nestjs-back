@@ -33,3 +33,4 @@ export const COURSES = "Courses";
 export const COURSE_STUDENT = "CourseStudent";
 export const COURSE_TEACHER = "CourseTeacher";
 export const CLASSES = "Classes";
+export const CLASS_STUDENTS = "ClassStudents";
