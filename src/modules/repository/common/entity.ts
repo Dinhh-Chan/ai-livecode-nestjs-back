@@ -34,3 +34,6 @@ export const COURSE_STUDENT = "CourseStudent";
 export const COURSE_TEACHER = "CourseTeacher";
 export const CLASSES = "Classes";
 export const CLASS_STUDENTS = "ClassStudents";
+export const CONTESTS = "Contests";
+export const CONTEST_USERS = "ContestUsers";
+export const CONTEST_PROBLEMS = "ContestProblems";

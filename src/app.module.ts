@@ -29,6 +29,7 @@ import { TestCaseResultsModule } from "./modules/test-case-results/test-case-res
 import { CoursesModule } from "./modules/courses/courses.module";
 import { ClassModule } from "./modules/class/class.module";
 import { ClassStudentsModule } from "./modules/class-students/class-students.module";
+import { ContestsModule } from "./modules/contests/contests.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -60,6 +61,7 @@ import { ClassStudentsModule } from "./modules/class-students/class-students.mod
         CoursesModule,
         ClassModule,
         ClassStudentsModule,
+        ContestsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
