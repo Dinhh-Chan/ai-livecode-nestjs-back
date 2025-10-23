@@ -32,3 +32,4 @@ export const JUDGE_NODE_LOGS = "JudgeNodeLogs";
 export const COURSES = "Courses";
 export const COURSE_STUDENT = "CourseStudent";
 export const COURSE_TEACHER = "CourseTeacher";
+export const CLASSES = "Classes";

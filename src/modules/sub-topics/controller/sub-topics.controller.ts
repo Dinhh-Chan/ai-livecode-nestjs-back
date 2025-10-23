@@ -7,10 +7,14 @@ import { Controller, Get, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionSubTopicsDto } from "../dto/condition-sub-topics.dto";
 import { GetManyQuery } from "@common/constant";
-import { ReqUser } from "@common/decorator/auth.decorator";
+import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
+import { SystemRole } from "@module/user/common/constant";
 import { ApiListResponse } from "@common/decorator/api.decorator";
-import { RequestQuery } from "@common/decorator/query.decorator";
+import {
+    RequestQuery,
+    RequestCondition,
+} from "@common/decorator/query.decorator";
 
 @Controller("sub-topics")
 @ApiTags("Sub Topics")
@@ -22,6 +26,18 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
 ) {
     constructor(private readonly subTopicsService: SubTopicsService) {
         super(subTopicsService);
+    }
+
+    @Get("many")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
+    @ApiOperation({ summary: "Lấy danh sách sub-topics" })
+    @ApiListResponse(SubTopics)
+    async getMany(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionSubTopicsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<SubTopics>,
+    ) {
+        return this.subTopicsService.getMany(user, conditions, query);
     }
 
     @Get("by-topic/:topicId")

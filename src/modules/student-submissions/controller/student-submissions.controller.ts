@@ -13,6 +13,13 @@ import { SubmitCodeDto } from "../dto/submit-code.dto";
 import { SubmissionResponseDto } from "../dto/submission-response.dto";
 import { RankingResponseDto } from "../dto/ranking-response.dto";
 import { RankingRecordDto } from "../dto/ranking-record.dto";
+import { GetManyQuery } from "@common/constant";
+import {
+    RequestCondition,
+    RequestQuery,
+} from "@common/decorator/query.decorator";
+import { ApiListResponse } from "@common/decorator/api.decorator";
+import { AllowSystemRoles } from "@common/decorator/auth.decorator";
 
 @Controller("student-submissions")
 @ApiTags("Student Submissions")
@@ -49,6 +56,18 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         private readonly studentSubmissionsService: StudentSubmissionsService,
     ) {
         super(studentSubmissionsService);
+    }
+
+    @Get("many")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
+    @ApiOperation({ summary: "Lấy danh sách submissions" })
+    @ApiListResponse(StudentSubmissions)
+    async getMany(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionStudentSubmissionsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<StudentSubmissions>,
+    ) {
+        return this.studentSubmissionsService.getMany(user, conditions, query);
     }
 
     @Post("submit")

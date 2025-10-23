@@ -990,15 +990,23 @@ export class StudentSubmissionsService extends BaseService<
             const users = await this.getUsersByIds(userIds);
             const userMap = new Map(users.map((u) => [u._id, u]));
 
-            // Tạo danh sách ranking cuối cùng
+            // Tạo danh sách ranking cuối cùng với rank đúng
             const finalRankings: RankingRecord[] = [];
+            let currentRank = 1;
+            let previousScore = -1;
 
-            // Thêm top users
+            // Thêm top users với rank đúng (cùng điểm thì cùng rank)
             rankingData.slice(0, limit).forEach((item, index) => {
                 const userData = userMap.get(item.userId);
                 if (userData) {
+                    // Nếu điểm khác với user trước đó, cập nhật rank
+                    if (item.totalProblemsSolved !== previousScore) {
+                        currentRank = index + 1;
+                        previousScore = item.totalProblemsSolved;
+                    }
+
                     finalRankings.push({
-                        rankNumber: index + 1,
+                        rankNumber: currentRank,
                         user: this.mapUserToRecord(userData),
                         totalProblemsSolved: item.totalProblemsSolved,
                     });
@@ -1014,8 +1022,19 @@ export class StudentSubmissionsService extends BaseService<
                 if (currentUserIndex !== -1 && currentUserIndex >= limit) {
                     const currentUser = await this.getUserById(user._id);
                     if (currentUser) {
+                        // Tính rank thực tế cho current user
+                        let actualRank = 1;
+                        for (let i = 0; i < currentUserIndex; i++) {
+                            if (
+                                rankingData[i].totalProblemsSolved !==
+                                rankingData[i + 1].totalProblemsSolved
+                            ) {
+                                actualRank = i + 2;
+                            }
+                        }
+
                         finalRankings.push({
-                            rankNumber: currentUserIndex + 1, // Rank thực tế trong toàn bộ danh sách
+                            rankNumber: actualRank,
                             user: this.mapUserToRecord(currentUser),
                             totalProblemsSolved:
                                 rankingData[currentUserIndex]
