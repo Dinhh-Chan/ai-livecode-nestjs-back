@@ -60,7 +60,9 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
 
     @Get("many")
     @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
-    @ApiOperation({ summary: "Lấy danh sách submissions" })
+    @ApiOperation({
+        summary: "Lấy danh sách submissions với thông tin problem và student",
+    })
     @ApiListResponse(StudentSubmissions)
     async getMany(
         @ReqUser() user: User,

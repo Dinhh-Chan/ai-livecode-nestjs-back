@@ -129,6 +129,30 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
+     * Ghi đè getMany để trả về submissions với thông tin problem đầy đủ
+     */
+    async getMany(user: User, conditions: any, query: any): Promise<any[]> {
+        this.logger.log(
+            `Getting submissions with details, conditions: ${JSON.stringify(conditions)}`,
+        );
+
+        // Lấy danh sách submissions cơ bản
+        const submissions = await super.getMany(user, conditions, query);
+
+        // Làm giàu từng submission với thông tin user và problem
+        const enrichedSubmissions = await Promise.all(
+            submissions.map(async (submission) => {
+                return await this.enrichSubmissionWithDetails(submission, user);
+            }),
+        );
+
+        this.logger.log(
+            `Enriched ${enrichedSubmissions.length} submissions with problem details`,
+        );
+        return enrichedSubmissions;
+    }
+
+    /**
      * Lấy submissions theo status
      */
     async getSubmissionsByStatus(
@@ -1135,6 +1159,23 @@ export class StudentSubmissionsService extends BaseService<
             );
             this.logger.log(`Problem fetched: ${problem ? "success" : "null"}`);
 
+            // Lấy thông tin student
+            let student = null;
+            if (submission.student_id) {
+                try {
+                    // Sử dụng userService để lấy thông tin student
+                    student = await this.userService.getById(
+                        currentUser,
+                        submission.student_id,
+                    );
+                    this.logger.log(
+                        `Student fetched: ${student ? "success" : "null"}`,
+                    );
+                } catch (err) {
+                    this.logger.error(`Error fetching student: ${err.message}`);
+                }
+            }
+
             // Tạo object sạch chỉ với dữ liệu cần thiết
             const cleanSubmission = {
                 _id: submission._id,
@@ -1165,6 +1206,15 @@ export class StudentSubmissionsService extends BaseService<
                           time_limit_ms: problem.time_limit_ms,
                           memory_limit_mb: problem.memory_limit_mb,
                           number_of_tests: problem.number_of_tests,
+                      }
+                    : undefined,
+                student: student
+                    ? {
+                          _id: student._id,
+                          username: student.username,
+                          email: student.email,
+                          fullname: student.fullname,
+                          systemRole: student.systemRole,
                       }
                     : undefined,
             };
