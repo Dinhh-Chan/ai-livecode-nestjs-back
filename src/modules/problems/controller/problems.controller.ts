@@ -281,13 +281,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         SystemRole.TEACHER,
     )
     @ApiOperation({
-        summary: "Lấy danh sách bài tập cơ bản (không bao gồm test cases)",
+        summary:
+            "Lấy danh sách bài tập cơ bản có phân trang (không bao gồm test cases)",
         description:
-            "API để lấy danh sách bài tập cùng với topic và subtopic nhưng không bao gồm test cases",
+            "API để lấy danh sách bài tập có phân trang cùng với topic và subtopic nhưng không bao gồm test cases",
     })
     @ApiListResponse(Problems)
     @ApiCondition()
-    @ApiGet({ mode: "many" })
+    @ApiGet()
     async getProblemsBasic(
         @ReqUser() user: User,
         @RequestCondition(ConditionProblemsDto) conditions: any,
@@ -297,7 +298,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             { path: "topic" },
             { path: "sub_topic" },
         ];
-        return this.problemsService.getMany(user, conditions, {
+        return this.problemsService.getPage(user, conditions, {
             ...query,
             population,
         });
