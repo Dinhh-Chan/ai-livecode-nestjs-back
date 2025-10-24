@@ -3,8 +3,16 @@ import { TestCasesService } from "../services/test-cases.services";
 import { TestCases } from "../entities/test-cases.entity";
 import { CreateTestCasesDto } from "../dto/create-test-cases.dto";
 import { UpdateTestCasesDto } from "../dto/update-test-cases.dto";
-import { Controller, Get, Param } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
+import { CreateBulkTestCasesDto } from "../dto/create-bulk-test-cases.dto";
+import { Controller, Get, Param, Post, Body } from "@nestjs/common";
+import {
+    ApiTags,
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiBody,
+    ApiResponse,
+} from "@nestjs/swagger";
 import { ConditionTestCasesDto } from "../dto/condition-test-cases.dto";
 import { GetManyQuery } from "@common/constant";
 import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
@@ -100,5 +108,24 @@ export class TestCasesController extends BaseControllerFactory<TestCases>(
             { problem_id: problemId },
             query,
         );
+    }
+
+    @Post("bulk")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Tạo nhiều test cases cùng lúc",
+        description: "API để tạo nhiều test cases cùng một lúc",
+    })
+    @ApiBody({ type: CreateBulkTestCasesDto })
+    @ApiResponse({
+        status: 201,
+        description: "Tạo thành công nhiều test cases",
+        type: [TestCases],
+    })
+    async createBulkTestCases(
+        @ReqUser() user: User,
+        @Body() dto: CreateBulkTestCasesDto,
+    ) {
+        return this.testCasesService.createBulkTestCases(user, dto.testCases);
     }
 }

@@ -3,8 +3,17 @@ import { ProblemsService } from "../services/problems.services";
 import { Problems } from "../entities/problems.entity";
 import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { UpdateProblemsDto } from "../dto/update-problems.dto";
-import { Controller, Get, Param } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
+import { CreateBulkProblemsDto } from "../dto/create-bulk-problems.dto";
+import { CreateProblemWithTestcasesDto } from "../dto/create-problem-with-testcases.dto";
+import { Controller, Get, Param, Post, Body } from "@nestjs/common";
+import {
+    ApiTags,
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiBody,
+    ApiResponse,
+} from "@nestjs/swagger";
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
 import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { SystemRole } from "@module/user/common/constant";
@@ -148,7 +157,12 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     }
 
     @Get("by-sub-topic/:subTopicId")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách problems theo sub_topic_id",
         description: "API để lấy tất cả problems thuộc về một sub topic cụ thể",
@@ -215,6 +229,47 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             user,
             { sub_topic_id: subTopicId },
             { ...query, population },
+        );
+    }
+
+    @Post("bulk")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Tạo nhiều bài tập cùng lúc",
+        description: "API để tạo nhiều bài tập cùng một lúc",
+    })
+    @ApiBody({ type: CreateBulkProblemsDto })
+    @ApiResponse({
+        status: 201,
+        description: "Tạo thành công nhiều bài tập",
+        type: [Problems],
+    })
+    async createBulkProblems(
+        @ReqUser() user: User,
+        @Body() dto: CreateBulkProblemsDto,
+    ) {
+        return this.problemsService.createBulkProblems(user, dto.problems);
+    }
+
+    @Post("with-testcases")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Tạo bài tập cùng với test cases",
+        description: "API để tạo bài tập cùng với các test cases của nó",
+    })
+    @ApiBody({ type: CreateProblemWithTestcasesDto })
+    @ApiResponse({
+        status: 201,
+        description: "Tạo thành công bài tập và test cases",
+    })
+    async createProblemWithTestCases(
+        @ReqUser() user: User,
+        @Body() dto: CreateProblemWithTestcasesDto,
+    ) {
+        return this.problemsService.createProblemWithTestCases(
+            user,
+            dto.problem,
+            dto.testCases,
         );
     }
 }
