@@ -272,4 +272,34 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             dto.testCases,
         );
     }
+
+    @Get("basic")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary: "Lấy danh sách bài tập cơ bản (không bao gồm test cases)",
+        description:
+            "API để lấy danh sách bài tập cùng với topic và subtopic nhưng không bao gồm test cases",
+    })
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet({ mode: "many" })
+    async getProblemsBasic(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetManyQuery<Problems>,
+    ) {
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+        ];
+        return this.problemsService.getMany(user, conditions, {
+            ...query,
+            population,
+        });
+    }
 }
