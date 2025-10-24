@@ -273,7 +273,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         );
     }
 
-    @Get("basic")
+    @Get("list/basic")
     @AllowSystemRoles(
         SystemRole.USER,
         SystemRole.ADMIN,
