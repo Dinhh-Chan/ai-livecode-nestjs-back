@@ -23,6 +23,19 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
     ConditionSubTopicsDto,
     CreateSubTopicsDto,
     UpdateSubTopicsDto,
+    {
+        authorize: true,
+        routes: {
+            getById: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
+        },
+    },
 ) {
     constructor(private readonly subTopicsService: SubTopicsService) {
         super(subTopicsService);
@@ -41,6 +54,12 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
     }
 
     @Get("by-topic/:topicId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách sub-topics theo topic ID",
         description:
