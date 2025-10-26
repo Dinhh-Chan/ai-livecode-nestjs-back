@@ -243,6 +243,83 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         };
     }
 
+    @Get("admin/fix-memory-limits")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Sửa memory limits quá cao",
+        description: "API để sửa các problems có memory_limit_mb >= 512",
+    })
+    async fixMemoryLimits(@ReqUser() user: User) {
+        // Lấy tất cả problems để kiểm tra
+        const allProblems = await this.problemsService.getMany(user, {}, {});
+
+        // Lọc các problems có memory_limit_mb > 512
+        const problemsWithHighMemory = allProblems.filter(
+            (p) => p.memory_limit_mb >= 512,
+        );
+
+        const fixedProblems = [];
+
+        for (const problem of problemsWithHighMemory) {
+            try {
+                const updatedProblem = await this.problemsService.updateById(
+                    user,
+                    problem._id,
+                    { memory_limit_mb: 500 },
+                );
+                fixedProblems.push({
+                    _id: problem._id,
+                    name: problem.name,
+                    old_memory_limit: problem.memory_limit_mb,
+                    new_memory_limit: 500,
+                });
+            } catch (error) {
+                console.error(`Error fixing problem ${problem._id}:`, error);
+            }
+        }
+
+        return {
+            message: `Fixed ${fixedProblems.length} problems with high memory limits`,
+            total_problems: allProblems.length,
+            problems_with_high_memory: problemsWithHighMemory.length,
+            fixed_problems: fixedProblems,
+            total_found: problemsWithHighMemory.length,
+        };
+    }
+
+    @Get("admin/check-memory-limits")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Kiểm tra memory limits",
+        description: "API để kiểm tra các problems có memory_limit_mb >= 512",
+    })
+    async checkMemoryLimits(@ReqUser() user: User) {
+        // Lấy tất cả problems để kiểm tra
+        const allProblems = await this.problemsService.getMany(user, {}, {});
+
+        // Lọc các problems có memory_limit_mb > 512
+        const problemsWithHighMemory = allProblems.filter(
+            (p) => p.memory_limit_mb >= 512,
+        );
+
+        return {
+            message: `Found ${problemsWithHighMemory.length} problems with memory_limit_mb > 512`,
+            total_problems: allProblems.length,
+            problems_with_high_memory: problemsWithHighMemory.map((p) => ({
+                _id: p._id,
+                name: p.name,
+                memory_limit_mb: p.memory_limit_mb,
+                difficulty: p.difficulty,
+            })),
+            // Hiển thị một vài examples để debug
+            sample_problems: allProblems.slice(0, 5).map((p) => ({
+                _id: p._id,
+                name: p.name,
+                memory_limit_mb: p.memory_limit_mb,
+            })),
+        };
+    }
+
     @Post("bulk")
     @AllowSystemRoles(SystemRole.ADMIN)
     @ApiOperation({
