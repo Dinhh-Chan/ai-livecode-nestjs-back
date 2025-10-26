@@ -1,7 +1,7 @@
 import { Type } from "class-transformer";
 import { IsArray, ValidateNested, ArrayMinSize } from "class-validator";
 import { CreateProblemsDto } from "./create-problems.dto";
-import { CreateTestCasesDto } from "../../test-cases/dto/create-test-cases.dto";
+import { CreateTestCasesWithoutProblemIdDto } from "./create-test-cases-without-problem-id.dto";
 
 export class CreateProblemWithTestcasesDto {
     @ValidateNested()
@@ -11,6 +11,6 @@ export class CreateProblemWithTestcasesDto {
     @IsArray()
     @ArrayMinSize(1, { message: "Phải có ít nhất một test case" })
     @ValidateNested({ each: true })
-    @Type(() => CreateTestCasesDto)
-    testCases: CreateTestCasesDto[];
+    @Type(() => CreateTestCasesWithoutProblemIdDto)
+    testCases: CreateTestCasesWithoutProblemIdDto[];
 }

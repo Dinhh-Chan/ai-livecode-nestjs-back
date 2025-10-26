@@ -8,6 +8,7 @@ import { User } from "@module/user/entities/user.entity";
 import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { TestCasesService } from "../../test-cases/services/test-cases.services";
 import { CreateTestCasesDto } from "../../test-cases/dto/create-test-cases.dto";
+import { CreateTestCasesWithoutProblemIdDto } from "../dto/create-test-cases-without-problem-id.dto";
 
 @Injectable()
 export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
@@ -54,7 +55,7 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
     async createProblemWithTestCases(
         user: User,
         problemDto: CreateProblemsDto,
-        testCaseDtos: CreateTestCasesDto[],
+        testCaseDtos: CreateTestCasesWithoutProblemIdDto[],
     ): Promise<{
         problem: Problems;
         testCases: any[];

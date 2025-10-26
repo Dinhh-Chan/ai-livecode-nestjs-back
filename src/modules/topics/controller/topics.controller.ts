@@ -30,6 +30,14 @@ export class TopicsController extends BaseControllerFactory<Topics>(
             getMany: {
                 enable: false, // Disable để tránh xung đột với route custom
             },
+            getById: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
         },
     },
 ) {
