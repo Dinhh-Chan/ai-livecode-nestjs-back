@@ -6,9 +6,10 @@ import { Entity } from "@module/repository";
 import { RepositoryProvider } from "@module/repository/common/repository";
 import { SequelizeModule } from "@nestjs/sequelize";
 import { SubTopicsRepositorySql } from "./repository/sub-topics-repository.sql";
+import { ProblemsModule } from "../problems/problems.module";
 
 @Module({
-    imports: [SequelizeModule.forFeature([SubTopicsModel])],
+    imports: [SequelizeModule.forFeature([SubTopicsModel]), ProblemsModule],
     controllers: [SubTopicsController],
     providers: [
         SubTopicsService,

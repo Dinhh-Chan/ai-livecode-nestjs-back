@@ -50,7 +50,11 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         @RequestCondition(ConditionSubTopicsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getMany(user, conditions, query);
+        return this.subTopicsService.getManyWithProblemCounts(
+            user,
+            conditions,
+            query,
+        );
     }
 
     @Get("by-topic/:topicId")
@@ -105,6 +109,10 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         @Param("topicId") topicId: string,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getByTopicId(user, topicId, query);
+        return this.subTopicsService.getByTopicIdWithProblemCounts(
+            user,
+            topicId,
+            query,
+        );
     }
 }

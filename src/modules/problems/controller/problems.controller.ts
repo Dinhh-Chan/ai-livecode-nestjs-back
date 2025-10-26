@@ -225,11 +225,22 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(
+
+        const problems = await this.problemsService.getMany(
             user,
             { sub_topic_id: subTopicId },
             { ...query, population },
         );
+
+        const problemCount = await this.problemsService.countProblemsBySubTopic(
+            user,
+            subTopicId,
+        );
+
+        return {
+            problems,
+            problem_counts: problemCount,
+        };
     }
 
     @Post("bulk")

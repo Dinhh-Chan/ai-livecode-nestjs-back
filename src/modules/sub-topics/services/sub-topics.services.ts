@@ -7,6 +7,7 @@ import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
 import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { BaseQueryOption } from "@module/repository/common/base-repository.interface";
+import { ProblemsService } from "../../problems/services/problems.services";
 
 @Injectable()
 export class SubTopicsService extends BaseService<
@@ -16,6 +17,7 @@ export class SubTopicsService extends BaseService<
     constructor(
         @InjectRepository(Entity.SUB_TOPICS)
         private readonly subTopicsRepository: SubTopicsRepository,
+        private readonly problemsService: ProblemsService,
     ) {
         super(subTopicsRepository);
     }
@@ -39,6 +41,7 @@ export class SubTopicsService extends BaseService<
             ...query,
             sort: query.sort || { sub_topic_name: 1 },
         };
+        return super.getPage(user, conditions, queryWithDefaultSort);
     }
     async getMany(
         user: User,
@@ -50,5 +53,67 @@ export class SubTopicsService extends BaseService<
             sort: query.sort || { sub_topic_name: 1 },
         };
         return super.getMany(user, conditions, queryWithDefaultSort);
+    }
+
+    /**
+     * Lấy danh sách sub-topics theo topic ID với problem counts
+     */
+    async getByTopicIdWithProblemCounts(
+        user: User,
+        topicId: string,
+        query?: GetManyQuery<SubTopics> & BaseQueryOption<unknown>,
+    ) {
+        const subTopics = await this.getMany(
+            user,
+            { topic_id: topicId },
+            query,
+        );
+
+        // Lấy danh sách sub-topic IDs
+        const subTopicIds = subTopics.map((st) => st._id);
+
+        // Đếm problems cho mỗi sub-topic
+        const problemCounts =
+            await this.problemsService.countProblemsBySubTopics(
+                user,
+                subTopicIds,
+            );
+
+        // Thêm problem_counts vào mỗi sub-topic
+        const subTopicsWithCounts = subTopics.map((subTopic) => ({
+            ...subTopic,
+            problem_counts: problemCounts[subTopic._id] || 0,
+        }));
+
+        return subTopicsWithCounts;
+    }
+
+    /**
+     * Lấy danh sách sub-topics với problem counts
+     */
+    async getManyWithProblemCounts(
+        user: User,
+        conditions: any,
+        query: GetManyQuery<SubTopics>,
+    ) {
+        const subTopics = await this.getMany(user, conditions, query);
+
+        // Lấy danh sách sub-topic IDs
+        const subTopicIds = subTopics.map((st) => st._id);
+
+        // Đếm problems cho mỗi sub-topic
+        const problemCounts =
+            await this.problemsService.countProblemsBySubTopics(
+                user,
+                subTopicIds,
+            );
+
+        // Thêm problem_counts vào mỗi sub-topic
+        const subTopicsWithCounts = subTopics.map((subTopic) => ({
+            ...subTopic,
+            problem_counts: problemCounts[subTopic._id] || 0,
+        }));
+
+        return subTopicsWithCounts;
     }
 }

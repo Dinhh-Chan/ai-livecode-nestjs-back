@@ -104,4 +104,32 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
             testCases: createdTestCases,
         };
     }
+
+    /**
+     * Đếm số lượng problems theo sub_topic_id
+     */
+    async countProblemsBySubTopic(
+        user: User,
+        subTopicId: string,
+    ): Promise<number> {
+        const conditions = { sub_topic_id: subTopicId };
+        return this.problemsRepository.count(conditions);
+    }
+
+    /**
+     * Đếm số lượng problems cho nhiều sub-topics
+     */
+    async countProblemsBySubTopics(
+        user: User,
+        subTopicIds: string[],
+    ): Promise<{ [subTopicId: string]: number }> {
+        const counts: { [subTopicId: string]: number } = {};
+
+        for (const subTopicId of subTopicIds) {
+            const count = await this.countProblemsBySubTopic(user, subTopicId);
+            counts[subTopicId] = count;
+        }
+
+        return counts;
+    }
 }
