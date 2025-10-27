@@ -17,6 +17,9 @@ import {
     UserRecord,
 } from "../interfaces/ranking.interface";
 import { UserService } from "@module/user/service/user.service";
+import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
+import { forwardRef, Inject } from "@nestjs/common";
+
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
     StudentSubmissions,
@@ -31,6 +34,8 @@ export class StudentSubmissionsService extends BaseService<
         private readonly testCasesService: TestCasesService,
         private readonly problemsService: ProblemsService,
         private readonly userService: UserService,
+        @Inject(forwardRef(() => UserProblemProgressService))
+        private readonly userProblemProgressService: UserProblemProgressService,
     ) {
         super(studentSubmissionsRepository);
     }
@@ -246,11 +251,101 @@ export class StudentSubmissionsService extends BaseService<
         status: SubmissionStatus,
         additionalData?: any,
     ): Promise<StudentSubmissions> {
-        return this.studentSubmissionsRepository.updateSubmissionStatus(
-            submissionId,
-            status,
-            additionalData,
-        );
+        // Cập nhật trạng thái submission
+        const updatedSubmission =
+            await this.studentSubmissionsRepository.updateSubmissionStatus(
+                submissionId,
+                status,
+                additionalData,
+            );
+
+        // Nếu submission được chấp nhận, cập nhật tiến độ user
+        if (status === SubmissionStatus.ACCEPTED) {
+            try {
+                await this.userProblemProgressService.updateProgressOnSubmission(
+                    updatedSubmission.student_id,
+                    {
+                        problem_id: updatedSubmission.problem_id,
+                        status,
+                        score: updatedSubmission.score || 0,
+                    },
+                );
+
+                this.logger.log(
+                    `Updated progress for user ${updatedSubmission.student_id} on problem ${updatedSubmission.problem_id}`,
+                );
+            } catch (error) {
+                this.logger.error(
+                    `Failed to update progress for user ${updatedSubmission.student_id} on problem ${updatedSubmission.problem_id}: ${error.message}`,
+                );
+                // Không throw error để không ảnh hưởng đến việc cập nhật submission
+            }
+        } else {
+            // Với các trạng thái khác, chỉ cập nhật attempt count
+            try {
+                await this.userProblemProgressService.updateProgressOnSubmission(
+                    updatedSubmission.student_id,
+                    {
+                        problem_id: updatedSubmission.problem_id,
+                        status,
+                        score: updatedSubmission.score || 0,
+                    },
+                );
+            } catch (error) {
+                this.logger.error(
+                    `Failed to update attempt count for user ${updatedSubmission.student_id} on problem ${updatedSubmission.problem_id}: ${error.message}`,
+                );
+            }
+        }
+
+        return updatedSubmission;
+    }
+
+    /**
+     * Cập nhật tiến độ user khi có kết quả từ Judge0
+     * Method này có thể được gọi từ webhook hoặc callback của Judge0
+     */
+    async updateUserProgressFromJudgeResult(
+        submissionId: string,
+        judgeResult: {
+            status: SubmissionStatus;
+            score?: number;
+            execution_time_ms?: number;
+            memory_used_mb?: number;
+            test_cases_passed?: number;
+            total_test_cases?: number;
+        },
+    ): Promise<void> {
+        try {
+            // Lấy submission để có thông tin user và problem
+            const submission = await this.studentSubmissionsRepository.getOne(
+                { submission_id: submissionId },
+                {},
+            );
+
+            if (!submission) {
+                this.logger.error(`Submission ${submissionId} not found`);
+                return;
+            }
+
+            // Cập nhật tiến độ user
+            await this.userProblemProgressService.updateProgressOnSubmission(
+                submission.student_id,
+                {
+                    problem_id: submission.problem_id,
+                    status: judgeResult.status,
+                    score: judgeResult.score || 0,
+                },
+            );
+
+            this.logger.log(
+                `Updated progress for user ${submission.student_id} on problem ${submission.problem_id} with status ${judgeResult.status}`,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Failed to update progress from judge result for submission ${submissionId}: ${error.message}`,
+            );
+        }
     }
 
     /**
@@ -308,6 +403,28 @@ export class StudentSubmissionsService extends BaseService<
             this.logger.log(
                 `Submission created successfully: ${JSON.stringify(result)}`,
             );
+
+            // Cập nhật tiến độ user khi tạo submission mới
+            try {
+                await this.userProblemProgressService.updateProgressOnSubmission(
+                    submissionData.student_id,
+                    {
+                        problem_id: submissionData.problem_id,
+                        status: SubmissionStatus.PENDING,
+                        score: 0,
+                    },
+                );
+
+                this.logger.log(
+                    `Updated progress for user ${submissionData.student_id} on problem ${submissionData.problem_id} - attempt recorded`,
+                );
+            } catch (error) {
+                this.logger.error(
+                    `Failed to update progress for user ${submissionData.student_id} on problem ${submissionData.problem_id}: ${error.message}`,
+                );
+                // Không throw error để không ảnh hưởng đến việc tạo submission
+            }
+
             return result;
         } catch (error) {
             this.logger.error(`Error creating submission: ${error.message}`);

@@ -32,6 +32,7 @@ import { ClassStudentsModule } from "./modules/class-students/class-students.mod
 import { ContestsModule } from "./modules/contests/contests.module";
 import { ContestUsersModule } from "./modules/contest-users/contest-users.module";
 import { ContestProblemsModule } from "./modules/contest-problems/contest-problems.module";
+import { UserProblemProgressModule } from "./modules/user-problem-progress/user-problem-progress.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -66,6 +67,7 @@ import { ContestProblemsModule } from "./modules/contest-problems/contest-proble
         ContestsModule,
         ContestUsersModule,
         ContestProblemsModule,
+        UserProblemProgressModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],

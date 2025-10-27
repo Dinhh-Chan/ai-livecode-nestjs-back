@@ -37,3 +37,4 @@ export const CLASS_STUDENTS = "ClassStudents";
 export const CONTESTS = "Contests";
 export const CONTEST_USERS = "ContestUsers";
 export const CONTEST_PROBLEMS = "ContestProblems";
+export const USER_PROBLEM_PROGRESS = "UserProblemProgress";

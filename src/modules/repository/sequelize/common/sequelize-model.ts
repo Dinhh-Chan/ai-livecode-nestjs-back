@@ -4,6 +4,7 @@ import { ProblemsModel } from "@module/problems/models/problems.models";
 import { SubTopicsModel } from "@module/sub-topics/models/sub-topics.models";
 import { TestCasesModel } from "@module/test-cases/models/test-cases.models";
 import { TopicsModel } from "@module/topics/models/topics.models";
+import { UserProblemProgressModel } from "@module/user-problem-progress/models/user-problem-progress.model";
 import { Model, ModelCtor } from "sequelize-typescript";
 import { AuditLogModel } from "../model/audit-log.model";
 import { AuthModel } from "../model/auth.model";
@@ -28,6 +29,7 @@ export const SequelizeModel: ModelCtor<Model>[] = [
     SubTopicsModel,
     ProblemsModel,
     TestCasesModel,
+    UserProblemProgressModel,
     SettingModel,
     IncrementModel,
     QuyTacMaModel,

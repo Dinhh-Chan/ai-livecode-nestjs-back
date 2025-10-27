@@ -11,6 +11,7 @@ import { TestCasesModule } from "@module/test-cases/test-cases.module";
 import { ProblemsModule } from "@module/problems/problems.module";
 import { HttpModule } from "@nestjs/axios";
 import { UserModule } from "@module/user/user.module";
+import { UserProblemProgressModule } from "@module/user-problem-progress/user-problem-progress.module";
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { UserModule } from "@module/user/user.module";
         TestCasesModule,
         ProblemsModule,
         forwardRef(() => UserModule),
+        forwardRef(() => UserProblemProgressModule),
     ],
     controllers: [StudentSubmissionsController],
     providers: [
