@@ -25,6 +25,7 @@ import bcrypt from "bcryptjs";
 import { SystemRole } from "../common/constant";
 import { ChangePasswordDto } from "../dto/change-password.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
+import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { User } from "../entities/user.entity";
 
 @Injectable()
@@ -361,6 +362,340 @@ export class UserService
             solved_problems_count: solvedProblemsCount,
             language_stats: languageStats,
         };
+    }
+
+    async getSystemStatistics(): Promise<SystemStatisticsDto> {
+        // Lấy tất cả submissions trong hệ thống
+        const allSubmissions = await this.studentSubmissionsService.getMany(
+            {} as User, // Dummy user cho admin query
+            {},
+            { limit: 50000 }, // Lấy tối đa 50000 submissions
+        );
+
+        // Lấy tất cả users và problems
+        const allUsers = await this.userRepository.getMany({}, {});
+        const allProblems = await this.studentSubmissionsService.getMany(
+            {} as User,
+            {},
+            { limit: 10000 },
+        );
+
+        // Tính toán thời gian
+        const now = new Date();
+        const today = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+        );
+        const thisWeekStart = new Date(today);
+        thisWeekStart.setDate(today.getDate() - today.getDay());
+        const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // Thống kê cơ bản
+        const totalSubmissions = allSubmissions.length;
+        const todaySubmissions = allSubmissions.filter(
+            (s) => new Date(s.submitted_at) >= today,
+        ).length;
+        const thisWeekSubmissions = allSubmissions.filter(
+            (s) => new Date(s.submitted_at) >= thisWeekStart,
+        ).length;
+        const thisMonthSubmissions = allSubmissions.filter(
+            (s) => new Date(s.submitted_at) >= thisMonthStart,
+        ).length;
+
+        const totalUsers = allUsers.length;
+        const totalProblems = new Set(allSubmissions.map((s) => s.problem_id))
+            .size;
+
+        // Tính tỷ lệ AC tổng
+        const acceptedSubmissions = allSubmissions.filter(
+            (s) => s.status === SubmissionStatus.ACCEPTED,
+        ).length;
+        const overallAcRate =
+            totalSubmissions > 0
+                ? (acceptedSubmissions / totalSubmissions) * 100
+                : 0;
+
+        // Thống kê theo ngày (7 ngày gần nhất)
+        const dailySubmissions = this.getDailySubmissions(allSubmissions, 7);
+
+        // Thống kê theo tuần (4 tuần gần nhất)
+        const weeklySubmissions = this.getWeeklySubmissions(allSubmissions, 4);
+
+        // Thống kê theo tháng (6 tháng gần nhất)
+        const monthlySubmissions = this.getMonthlySubmissions(
+            allSubmissions,
+            6,
+        );
+
+        // Thống kê AC rate theo problem
+        const problemAcStats = this.getProblemAcStats(allSubmissions);
+
+        // Thống kê AC rate theo user
+        const userAcStats = this.getUserAcStats(allSubmissions, allUsers);
+
+        // Thống kê theo ngôn ngữ
+        const languageStats: Record<string, number> = {};
+        allSubmissions.forEach((submission) => {
+            const lang = this.getLanguageName(submission.language_id);
+            languageStats[lang] = (languageStats[lang] || 0) + 1;
+        });
+
+        // Thống kê theo trạng thái
+        const statusStats: Record<string, number> = {};
+        allSubmissions.forEach((submission) => {
+            statusStats[submission.status] =
+                (statusStats[submission.status] || 0) + 1;
+        });
+
+        // Top users và problems
+        const topUsers = this.getTopUsers(allSubmissions, allUsers, 10);
+        const topProblems = this.getTopProblems(allSubmissions, 10);
+
+        return {
+            total_submissions: totalSubmissions,
+            today_submissions: todaySubmissions,
+            this_week_submissions: thisWeekSubmissions,
+            this_month_submissions: thisMonthSubmissions,
+            total_users: totalUsers,
+            total_problems: totalProblems,
+            overall_ac_rate: Math.round(overallAcRate * 100) / 100,
+            daily_submissions: dailySubmissions,
+            weekly_submissions: weeklySubmissions,
+            monthly_submissions: monthlySubmissions,
+            problem_ac_stats: problemAcStats,
+            user_ac_stats: userAcStats,
+            language_stats: languageStats,
+            status_stats: statusStats,
+            top_users: topUsers,
+            top_problems: topProblems,
+        };
+    }
+
+    private getDailySubmissions(
+        submissions: any[],
+        days: number,
+    ): Array<{ date: string; count: number }> {
+        const result: Array<{ date: string; count: number }> = [];
+        const now = new Date();
+
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(now.getDate() - i);
+            const dateStr = date.toISOString().split("T")[0];
+
+            const count = submissions.filter((s) => {
+                const submissionDate = new Date(s.submitted_at);
+                return (
+                    submissionDate.getFullYear() === date.getFullYear() &&
+                    submissionDate.getMonth() === date.getMonth() &&
+                    submissionDate.getDate() === date.getDate()
+                );
+            }).length;
+
+            result.push({ date: dateStr, count });
+        }
+
+        return result;
+    }
+
+    private getWeeklySubmissions(
+        submissions: any[],
+        weeks: number,
+    ): Array<{ week: string; count: number }> {
+        const result: Array<{ week: string; count: number }> = [];
+        const now = new Date();
+
+        for (let i = weeks - 1; i >= 0; i--) {
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() - i * 7);
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+
+            const year = weekStart.getFullYear();
+            const weekNumber = this.getWeekNumber(weekStart);
+            const weekStr = `${year}-W${weekNumber.toString().padStart(2, "0")}`;
+
+            const count = submissions.filter((s) => {
+                const submissionDate = new Date(s.submitted_at);
+                return submissionDate >= weekStart && submissionDate <= weekEnd;
+            }).length;
+
+            result.push({ week: weekStr, count });
+        }
+
+        return result;
+    }
+
+    private getMonthlySubmissions(
+        submissions: any[],
+        months: number,
+    ): Array<{ month: string; count: number }> {
+        const result: Array<{ month: string; count: number }> = [];
+        const now = new Date();
+
+        for (let i = months - 1; i >= 0; i--) {
+            const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthStr = `${month.getFullYear()}-${(month.getMonth() + 1)
+                .toString()
+                .padStart(2, "0")}`;
+
+            const count = submissions.filter((s) => {
+                const submissionDate = new Date(s.submitted_at);
+                return (
+                    submissionDate.getFullYear() === month.getFullYear() &&
+                    submissionDate.getMonth() === month.getMonth()
+                );
+            }).length;
+
+            result.push({ month: monthStr, count });
+        }
+
+        return result;
+    }
+
+    private getProblemAcStats(submissions: any[]): Array<{
+        problem_id: string;
+        problem_name: string;
+        total_submissions: number;
+        accepted_submissions: number;
+        ac_rate: number;
+    }> {
+        const problemStats: Record<
+            string,
+            {
+                problem_id: string;
+                problem_name: string;
+                total_submissions: number;
+                accepted_submissions: number;
+            }
+        > = {};
+
+        submissions.forEach((submission) => {
+            const problemId = submission.problem_id;
+            if (!problemStats[problemId]) {
+                problemStats[problemId] = {
+                    problem_id: problemId,
+                    problem_name: `Problem ${problemId}`, // Có thể lấy từ ProblemsService sau
+                    total_submissions: 0,
+                    accepted_submissions: 0,
+                };
+            }
+
+            problemStats[problemId].total_submissions++;
+            if (submission.status === SubmissionStatus.ACCEPTED) {
+                problemStats[problemId].accepted_submissions++;
+            }
+        });
+
+        return Object.values(problemStats).map((stat) => ({
+            ...stat,
+            ac_rate:
+                Math.round(
+                    (stat.accepted_submissions / stat.total_submissions) *
+                        100 *
+                        100,
+                ) / 100,
+        }));
+    }
+
+    private getUserAcStats(
+        submissions: any[],
+        users: User[],
+    ): Array<{
+        user_id: string;
+        username: string;
+        total_submissions: number;
+        accepted_submissions: number;
+        ac_rate: number;
+    }> {
+        const userStats: Record<
+            string,
+            {
+                user_id: string;
+                username: string;
+                total_submissions: number;
+                accepted_submissions: number;
+            }
+        > = {};
+
+        submissions.forEach((submission) => {
+            const userId = submission.student_id;
+            if (!userStats[userId]) {
+                const user = users.find((u) => u._id === userId);
+                userStats[userId] = {
+                    user_id: userId,
+                    username: user?.username || `User ${userId}`,
+                    total_submissions: 0,
+                    accepted_submissions: 0,
+                };
+            }
+
+            userStats[userId].total_submissions++;
+            if (submission.status === SubmissionStatus.ACCEPTED) {
+                userStats[userId].accepted_submissions++;
+            }
+        });
+
+        return Object.values(userStats).map((stat) => ({
+            ...stat,
+            ac_rate:
+                Math.round(
+                    (stat.accepted_submissions / stat.total_submissions) *
+                        100 *
+                        100,
+                ) / 100,
+        }));
+    }
+
+    private getTopUsers(
+        submissions: any[],
+        users: User[],
+        limit: number,
+    ): Array<{
+        user_id: string;
+        username: string;
+        total_submissions: number;
+        accepted_submissions: number;
+    }> {
+        const userStats = this.getUserAcStats(submissions, users);
+        return userStats
+            .sort((a, b) => b.total_submissions - a.total_submissions)
+            .slice(0, limit)
+            .map((stat) => ({
+                user_id: stat.user_id,
+                username: stat.username,
+                total_submissions: stat.total_submissions,
+                accepted_submissions: stat.accepted_submissions,
+            }));
+    }
+
+    private getTopProblems(
+        submissions: any[],
+        limit: number,
+    ): Array<{
+        problem_id: string;
+        problem_name: string;
+        total_submissions: number;
+        accepted_submissions: number;
+    }> {
+        const problemStats = this.getProblemAcStats(submissions);
+        return problemStats
+            .sort((a, b) => b.total_submissions - a.total_submissions)
+            .slice(0, limit)
+            .map((stat) => ({
+                problem_id: stat.problem_id,
+                problem_name: stat.problem_name,
+                total_submissions: stat.total_submissions,
+                accepted_submissions: stat.accepted_submissions,
+            }));
+    }
+
+    private getWeekNumber(date: Date): number {
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear =
+            (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+        return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
     }
 
     private getLanguageName(languageId: number): string {

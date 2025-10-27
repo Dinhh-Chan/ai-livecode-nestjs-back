@@ -7,6 +7,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request } from "express";
 import { ChangePasswordDto } from "../dto/change-password.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
+import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
 
@@ -84,6 +85,17 @@ export class UserController extends BaseControllerFactory<User>(
     })
     async getUserStatisticsById(@Param("userId") userId: string) {
         return this.userService.getUserStatisticsById(userId);
+    }
+
+    @Get("system-statistics")
+    @ApiRecordResponse(SystemStatisticsDto)
+    @ApiOperation({
+        summary: "Lấy thống kê tổng quan hệ thống",
+        description:
+            "API để lấy thống kê tổng quan về submissions, users, problems và các chỉ số khác của toàn bộ hệ thống",
+    })
+    async getSystemStatistics() {
+        return this.userService.getSystemStatistics();
     }
 
     // @Get("test")
