@@ -11,6 +11,7 @@ import { SettingKey } from "@module/setting/common/constant";
 import { SettingService } from "@module/setting/setting.service";
 import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
+import { ProblemsService } from "@module/problems/services/problems.services";
 import { CreateUserDto } from "@module/user/dto/create-user.dto";
 import { UserRepository } from "@module/user/repository/user-repository.interface";
 import {
@@ -42,6 +43,8 @@ export class UserService
         private readonly userTransaction: BaseTransaction,
         @Inject(forwardRef(() => StudentSubmissionsService))
         private readonly studentSubmissionsService: StudentSubmissionsService,
+        @Inject(forwardRef(() => ProblemsService))
+        private readonly problemsService: ProblemsService,
     ) {
         super(userRepository, {
             notFoundCode: "error-user-not-found",
@@ -249,6 +252,17 @@ export class UserService
             last_submission_date: lastSubmissionDate,
             solved_problems_count: solvedProblemsCount,
             language_stats: languageStats,
+            difficulty_stats: {
+                easy: { solved: 0, total: 0 },
+                medium: { solved: 0, total: 0 },
+                hard: { solved: 0, total: 0 },
+            },
+            activity_data: [],
+            total_active_days: 0,
+            max_streak: 0,
+            current_streak: 0,
+            recent_submissions: [],
+            progress_stats: { solved: 0, total: 0, attempting: 0 },
         };
     }
 
@@ -341,6 +355,23 @@ export class UserService
             languageStats[lang] = (languageStats[lang] || 0) + 1;
         });
 
+        // Thống kê theo độ khó
+        const difficultyStats = await this.getDifficultyStats(submissions);
+
+        // Dữ liệu hoạt động
+        const activityData = this.getActivityData(submissions, 30); // 30 ngày gần nhất
+        const totalActiveDays = this.getTotalActiveDays(submissions);
+        const streakData = this.getStreakData(submissions);
+
+        // Bài nộp gần đây
+        const recentSubmissions = await this.getRecentSubmissions(
+            submissions,
+            10,
+        );
+
+        // Thống kê tiến trình
+        const progressStats = await this.getProgressStats(userId);
+
         // Tính ranking (tạm thời đặt là 0, có thể implement sau)
         const ranking = 0;
         const totalUsers = 0;
@@ -361,6 +392,13 @@ export class UserService
             last_submission_date: lastSubmissionDate,
             solved_problems_count: solvedProblemsCount,
             language_stats: languageStats,
+            difficulty_stats: difficultyStats,
+            activity_data: activityData,
+            total_active_days: totalActiveDays,
+            max_streak: streakData.maxStreak,
+            current_streak: streakData.currentStreak,
+            recent_submissions: recentSubmissions,
+            progress_stats: progressStats,
         };
     }
 
@@ -715,5 +753,208 @@ export class UserService
             63: "javascript",
         };
         return languageMap[languageId] || "unknown";
+    }
+
+    // Helper methods for enhanced statistics
+    private async getDifficultyStats(
+        submissions: any[],
+    ): Promise<Record<string, { solved: number; total: number }>> {
+        const difficultyStats: Record<
+            string,
+            { solved: number; total: number }
+        > = {
+            easy: { solved: 0, total: 0 },
+            medium: { solved: 0, total: 0 },
+            hard: { solved: 0, total: 0 },
+        };
+
+        // Lấy thông tin problems để biết độ khó
+        const problemIds = [...new Set(submissions.map((s) => s.problem_id))];
+        const problems = await this.problemsService.getMany(
+            {} as User,
+            { _id: { $in: problemIds } },
+            {},
+        );
+
+        const problemDifficultyMap: Record<string, number> = {};
+        problems.forEach((problem) => {
+            problemDifficultyMap[problem._id] = problem.difficulty;
+        });
+
+        // Tính toán thống kê theo độ khó
+        submissions.forEach((submission) => {
+            const difficulty = problemDifficultyMap[submission.problem_id] || 1;
+            let difficultyKey = "easy";
+            if (difficulty >= 3) difficultyKey = "hard";
+            else if (difficulty >= 2) difficultyKey = "medium";
+
+            difficultyStats[difficultyKey].total++;
+            if (submission.status === SubmissionStatus.ACCEPTED) {
+                difficultyStats[difficultyKey].solved++;
+            }
+        });
+
+        return difficultyStats;
+    }
+
+    private getActivityData(
+        submissions: any[],
+        days: number,
+    ): Array<{ date: string; submissions_count: number }> {
+        const result: Array<{ date: string; submissions_count: number }> = [];
+        const now = new Date();
+
+        for (let i = days - 1; i >= 0; i--) {
+            const date = new Date(now);
+            date.setDate(now.getDate() - i);
+            const dateStr = date.toISOString().split("T")[0];
+
+            const count = submissions.filter((s) => {
+                const submissionDate = new Date(s.submitted_at);
+                return (
+                    submissionDate.getFullYear() === date.getFullYear() &&
+                    submissionDate.getMonth() === date.getMonth() &&
+                    submissionDate.getDate() === date.getDate()
+                );
+            }).length;
+
+            result.push({ date: dateStr, submissions_count: count });
+        }
+
+        return result;
+    }
+
+    private getTotalActiveDays(submissions: any[]): number {
+        const activeDays = new Set();
+        submissions.forEach((submission) => {
+            const date = new Date(submission.submitted_at);
+            const dateStr = date.toISOString().split("T")[0];
+            activeDays.add(dateStr);
+        });
+        return activeDays.size;
+    }
+
+    private getStreakData(submissions: any[]): {
+        maxStreak: number;
+        currentStreak: number;
+    } {
+        const activeDays = new Set();
+        submissions.forEach((submission) => {
+            const date = new Date(submission.submitted_at);
+            const dateStr = date.toISOString().split("T")[0];
+            activeDays.add(dateStr);
+        });
+
+        const sortedDays = Array.from(activeDays).sort();
+        let maxStreak = 0;
+        let currentStreak = 0;
+        let tempStreak = 1;
+
+        for (let i = 1; i < sortedDays.length; i++) {
+            const prevDate = new Date(sortedDays[i - 1] as string);
+            const currDate = new Date(sortedDays[i] as string);
+            const diffDays = Math.floor(
+                (currDate.getTime() - prevDate.getTime()) /
+                    (1000 * 60 * 60 * 24),
+            );
+
+            if (diffDays === 1) {
+                tempStreak++;
+            } else {
+                maxStreak = Math.max(maxStreak, tempStreak);
+                tempStreak = 1;
+            }
+        }
+        maxStreak = Math.max(maxStreak, tempStreak);
+
+        // Tính current streak
+        const today = new Date();
+        const todayStr = today.toISOString().split("T")[0];
+        let streakCount = 0;
+        const checkDate = new Date(today);
+
+        while (activeDays.has(checkDate.toISOString().split("T")[0])) {
+            streakCount++;
+            checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        currentStreak = streakCount;
+
+        return { maxStreak, currentStreak };
+    }
+
+    private async getRecentSubmissions(
+        submissions: any[],
+        limit: number,
+    ): Promise<
+        Array<{
+            problem_name: string;
+            submitted_at: string;
+            status: string;
+            language: string;
+        }>
+    > {
+        const recentSubs = submissions
+            .sort(
+                (a, b) =>
+                    new Date(b.submitted_at).getTime() -
+                    new Date(a.submitted_at).getTime(),
+            )
+            .slice(0, limit);
+
+        const problemIds = [...new Set(recentSubs.map((s) => s.problem_id))];
+        const problems = await this.problemsService.getMany(
+            {} as User,
+            { _id: { $in: problemIds } },
+            {},
+        );
+
+        const problemNameMap: Record<string, string> = {};
+        problems.forEach((problem) => {
+            problemNameMap[problem._id] = problem.name;
+        });
+
+        return recentSubs.map((submission) => ({
+            problem_name:
+                problemNameMap[submission.problem_id] ||
+                `Problem ${submission.problem_id}`,
+            submitted_at: submission.submitted_at,
+            status: submission.status,
+            language: this.getLanguageName(submission.language_id),
+        }));
+    }
+
+    private async getProgressStats(userId: string): Promise<{
+        solved: number;
+        total: number;
+        attempting: number;
+    }> {
+        // Lấy tất cả submissions của user
+        const submissions = await this.studentSubmissionsService.getMany(
+            {} as User,
+            { student_id: userId },
+            { limit: 10000 },
+        );
+
+        // Lấy tất cả problems mà user đã submit
+        const attemptedProblems = new Set(submissions.map((s) => s.problem_id));
+        const solvedProblems = new Set(
+            submissions
+                .filter((s) => s.status === SubmissionStatus.ACCEPTED)
+                .map((s) => s.problem_id),
+        );
+
+        // Lấy tổng số problems trong hệ thống
+        const allProblems = await this.problemsService.getMany(
+            {} as User,
+            {},
+            {},
+        );
+
+        return {
+            solved: solvedProblems.size,
+            total: allProblems.length,
+            attempting: attemptedProblems.size - solvedProblems.size,
+        };
     }
 }

@@ -110,4 +110,80 @@ export class UserStatisticsDto {
     })
     @EntityDefinition.field({ label: "Thống kê theo ngôn ngữ" })
     language_stats: Record<string, number>;
+
+    @ApiProperty({
+        description: "Phân chia theo độ khó",
+        example: {
+            easy: { solved: 15, total: 20 },
+            medium: { solved: 8, total: 15 },
+            hard: { solved: 2, total: 5 },
+        },
+    })
+    @EntityDefinition.field({ label: "Thống kê theo độ khó" })
+    difficulty_stats: Record<string, { solved: number; total: number }>;
+
+    @ApiProperty({
+        description: "Dữ liệu hoạt động theo ngày",
+        example: [
+            { date: "2025-01-01", submissions_count: 3 },
+            { date: "2025-01-02", submissions_count: 1 },
+        ],
+    })
+    @EntityDefinition.field({ label: "Dữ liệu hoạt động" })
+    activity_data: Array<{ date: string; submissions_count: number }>;
+
+    @ApiProperty({
+        description: "Tổng số ngày hoạt động",
+        example: 45,
+    })
+    @EntityDefinition.field({ label: "Tổng số ngày hoạt động" })
+    total_active_days: number;
+
+    @ApiProperty({
+        description: "Chuỗi ngày hoạt động dài nhất",
+        example: 7,
+    })
+    @EntityDefinition.field({ label: "Chuỗi ngày dài nhất" })
+    max_streak: number;
+
+    @ApiProperty({
+        description: "Chuỗi ngày hoạt động hiện tại",
+        example: 3,
+    })
+    @EntityDefinition.field({ label: "Chuỗi ngày hiện tại" })
+    current_streak: number;
+
+    @ApiProperty({
+        description: "Bài nộp gần đây",
+        example: [
+            {
+                problem_name: "Two Sum",
+                submitted_at: "2025-01-15T10:30:00Z",
+                status: "accepted",
+                language: "python",
+            },
+        ],
+    })
+    @EntityDefinition.field({ label: "Bài nộp gần đây" })
+    recent_submissions: Array<{
+        problem_name: string;
+        submitted_at: string;
+        status: string;
+        language: string;
+    }>;
+
+    @ApiProperty({
+        description: "Thống kê tiến trình",
+        example: {
+            solved: 17,
+            total: 39,
+            attempting: 5,
+        },
+    })
+    @EntityDefinition.field({ label: "Thống kê tiến trình" })
+    progress_stats: {
+        solved: number;
+        total: number;
+        attempting: number;
+    };
 }
