@@ -116,4 +116,36 @@ export class SubTopicsService extends BaseService<
 
         return subTopicsWithCounts;
     }
+
+    /**
+     * Lấy danh sách sub-topics có phân trang với problem counts
+     */
+    async getPageWithProblemCounts(
+        user: User,
+        conditions: any,
+        query: GetPageQuery<SubTopics>,
+    ) {
+        const pageResult = await this.getPage(user, conditions, query);
+
+        // Lấy danh sách sub-topic IDs từ kết quả
+        const subTopicIds = pageResult.result.map((st) => st._id);
+
+        // Đếm problems cho mỗi sub-topic
+        const problemCounts =
+            await this.problemsService.countProblemsBySubTopics(
+                user,
+                subTopicIds,
+            );
+
+        // Thêm problem_counts vào mỗi sub-topic trong result
+        const resultWithCounts = pageResult.result.map((subTopic) => ({
+            ...subTopic,
+            problem_counts: problemCounts[subTopic._id] || 0,
+        }));
+
+        return {
+            ...pageResult,
+            result: resultWithCounts,
+        };
+    }
 }

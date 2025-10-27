@@ -6,7 +6,7 @@ import { UpdateSubTopicsDto } from "../dto/update-sub-topics.dto";
 import { Controller, Get, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionSubTopicsDto } from "../dto/condition-sub-topics.dto";
-import { GetManyQuery } from "@common/constant";
+import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
@@ -64,11 +64,7 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         @RequestCondition(ConditionSubTopicsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getManyWithProblemCounts(
-            user,
-            conditions,
-            query,
-        );
+        return this.subTopicsService.getMany(user, conditions, query);
     }
 
     @Get("by-topic/:topicId")
@@ -123,9 +119,21 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         @Param("topicId") topicId: string,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getByTopicIdWithProblemCounts(
+        return this.subTopicsService.getByTopicId(user, topicId, query);
+    }
+
+    @Get("page")
+    @AllowSystemRoles(SystemRole.ADMIN, SystemRole.STUDENT, SystemRole.TEACHER)
+    @ApiOperation({ summary: "Lấy danh sách sub-topics có phân trang" })
+    @ApiListResponse(SubTopics)
+    async getPage(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionSubTopicsDto) conditions: any,
+        @RequestQuery() query: GetPageQuery<SubTopics>,
+    ) {
+        return this.subTopicsService.getPageWithProblemCounts(
             user,
-            topicId,
+            conditions,
             query,
         );
     }

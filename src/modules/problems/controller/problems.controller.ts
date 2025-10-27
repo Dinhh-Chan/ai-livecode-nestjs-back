@@ -225,22 +225,11 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-
-        const problems = await this.problemsService.getMany(
+        return this.problemsService.getMany(
             user,
             { sub_topic_id: subTopicId },
             { ...query, population },
         );
-
-        const problemCount = await this.problemsService.countProblemsBySubTopic(
-            user,
-            subTopicId,
-        );
-
-        return {
-            problems,
-            problem_counts: problemCount,
-        };
     }
 
     @Get("admin/fix-memory-limits")
