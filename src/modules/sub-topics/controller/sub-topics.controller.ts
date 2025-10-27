@@ -34,6 +34,20 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
                     SystemRole.TEACHER,
                 ],
             },
+            getMany: {
+                roles: [
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
+            getPage: {
+                roles: [
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
         },
     },
 ) {
@@ -42,7 +56,7 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
     }
 
     @Get("many")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
+    @AllowSystemRoles(SystemRole.ADMIN, SystemRole.STUDENT, SystemRole.TEACHER)
     @ApiOperation({ summary: "Lấy danh sách sub-topics" })
     @ApiListResponse(SubTopics)
     async getMany(
