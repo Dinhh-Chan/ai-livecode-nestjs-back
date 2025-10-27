@@ -55,7 +55,7 @@ export class UserProblemProgressRepositorySql
         }
 
         // Cập nhật thông tin
-        const isSolved = status === "ACCEPTED";
+        const isSolved = status.toLowerCase() === "accepted";
         const isAttempted = true;
         const attemptCount = progress.attempt_count + 1;
         const bestScore = Math.max(progress.best_score || 0, score || 0);
