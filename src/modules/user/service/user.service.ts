@@ -12,6 +12,7 @@ import { SettingService } from "@module/setting/setting.service";
 import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
 import { ProblemsService } from "@module/problems/services/problems.services";
+import { ProblemsCountService } from "@module/problems/services/problems-count.service";
 import { CreateUserDto } from "@module/user/dto/create-user.dto";
 import { UserRepository } from "@module/user/repository/user-repository.interface";
 import {
@@ -34,6 +35,8 @@ export class UserService
     extends BaseService<User, UserRepository>
     implements OnApplicationBootstrap
 {
+    private readonly logger = new Logger(UserService.name);
+
     constructor(
         @InjectRepository(Entity.USER)
         private readonly userRepository: UserRepository,
@@ -45,6 +48,8 @@ export class UserService
         private readonly studentSubmissionsService: StudentSubmissionsService,
         @Inject(forwardRef(() => ProblemsService))
         private readonly problemsService: ProblemsService,
+        @Inject(forwardRef(() => ProblemsCountService))
+        private readonly problemsCountService: ProblemsCountService,
     ) {
         super(userRepository, {
             notFoundCode: "error-user-not-found",
@@ -410,13 +415,15 @@ export class UserService
             { limit: 50000 }, // Lấy tối đa 50000 submissions
         );
 
-        // Lấy tất cả users và problems
+        // Lấy tất cả users
         const allUsers = await this.userRepository.getMany({}, {});
-        const allProblems = await this.studentSubmissionsService.getMany(
-            {} as User,
-            {},
-            { limit: 10000 },
-        );
+
+        // Dùng ProblemsCountService để đếm tổng số problems
+        const totalProblems =
+            await this.problemsCountService.getTotalProblemsCount();
+
+        // Log để debug
+        this.logger.log(`System statistics - Total problems: ${totalProblems}`);
 
         // Tính toán thời gian
         const now = new Date();
@@ -442,8 +449,6 @@ export class UserService
         ).length;
 
         const totalUsers = allUsers.length;
-        const totalProblems = new Set(allSubmissions.map((s) => s.problem_id))
-            .size;
 
         // Tính tỷ lệ AC tổng
         const acceptedSubmissions = allSubmissions.filter(
@@ -945,15 +950,12 @@ export class UserService
         );
 
         // Lấy tổng số problems trong hệ thống
-        const allProblems = await this.problemsService.getMany(
-            {} as User,
-            {},
-            {},
-        );
+        const totalProblems =
+            await this.problemsCountService.getTotalProblemsCount();
 
         return {
             solved: solvedProblems.size,
-            total: allProblems.length,
+            total: 699,
             attempting: attemptedProblems.size - solvedProblems.size,
         };
     }

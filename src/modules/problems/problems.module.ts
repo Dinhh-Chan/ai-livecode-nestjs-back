@@ -1,5 +1,6 @@
 import { ProblemsController } from "./controller/problems.controller";
 import { ProblemsService } from "./services/problems.services";
+import { ProblemsCountService } from "./services/problems-count.service";
 import { ProblemsModel } from "./models/problems.models";
 import { Module } from "@nestjs/common";
 import { Entity } from "@module/repository";
@@ -13,8 +14,9 @@ import { TestCasesModule } from "../test-cases/test-cases.module";
     controllers: [ProblemsController],
     providers: [
         ProblemsService,
+        ProblemsCountService,
         RepositoryProvider(Entity.PROBLEMS, ProblemsRepositorySql),
     ],
-    exports: [ProblemsService],
+    exports: [ProblemsService, ProblemsCountService],
 })
 export class ProblemsModule {}
