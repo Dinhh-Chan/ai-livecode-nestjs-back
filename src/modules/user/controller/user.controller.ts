@@ -1,11 +1,12 @@
 import { RequestAuthData } from "@common/constant/class/request-auth-data";
 import { ApiRecordResponse } from "@common/decorator/api.decorator";
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
-import { Body, Controller, Get, Put, Req } from "@nestjs/common";
+import { Body, Controller, Get, Put, Req, Param } from "@nestjs/common";
 
-import { ApiTags } from "@nestjs/swagger";
+import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request } from "express";
 import { ChangePasswordDto } from "../dto/change-password.dto";
+import { UserStatisticsDto } from "../dto/user-statistics.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
 
@@ -60,6 +61,29 @@ export class UserController extends BaseControllerFactory<User>(
     @ApiRecordResponse(User)
     async changePasswordMe(@Body() dto: ChangePasswordDto) {
         return this.userService.changePasswordMe(null, dto);
+    }
+
+    @Get("statistics")
+    @ApiRecordResponse(UserStatisticsDto)
+    @ApiOperation({
+        summary: "Lấy thống kê của user",
+        description:
+            "API để lấy thống kê chi tiết về submissions của user hiện tại",
+    })
+    async getUserStatistics(@Req() req: Request) {
+        const user = req.user as User;
+        return this.userService.getUserStatistics(user);
+    }
+
+    @Get("statistics/by-user-id/:userId")
+    @ApiRecordResponse(UserStatisticsDto)
+    @ApiOperation({
+        summary: "Lấy thống kê của user theo ID",
+        description:
+            "API để lấy thống kê chi tiết về submissions của user theo ID được truyền vào",
+    })
+    async getUserStatisticsById(@Param("userId") userId: string) {
+        return this.userService.getUserStatisticsById(userId);
     }
 
     // @Get("test")

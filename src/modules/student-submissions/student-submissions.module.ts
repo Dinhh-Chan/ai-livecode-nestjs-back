@@ -1,7 +1,7 @@
 import { StudentSubmissionsController } from "./controller/student-submissions.controller";
 import { StudentSubmissionsService } from "./services/student-submissions.services";
 import { StudentSubmissionsModel } from "./models/student-submissions.models";
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { Entity } from "@module/repository";
 import { RepositoryProvider } from "@module/repository/common/repository";
 import { SequelizeModule } from "@nestjs/sequelize";
@@ -18,7 +18,7 @@ import { UserModule } from "@module/user/user.module";
         HttpModule,
         TestCasesModule,
         ProblemsModule,
-        UserModule,
+        forwardRef(() => UserModule),
     ],
     controllers: [StudentSubmissionsController],
     providers: [
