@@ -4,6 +4,7 @@ import {
     DataType,
     ForeignKey,
     Model,
+    PrimaryKey,
     Table,
 } from "sequelize-typescript";
 import { Entity } from "@module/repository";
@@ -18,6 +19,7 @@ import { UserModel } from "./user.model";
     updatedAt: "updated_at",
 })
 export class CourseStudent extends Model {
+    @PrimaryKey
     @StrObjectId()
     _id: string;
 

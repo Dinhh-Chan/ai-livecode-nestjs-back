@@ -5,11 +5,19 @@ import { Entity } from "@module/repository";
 import { CourseStudent } from "@module/repository/sequelize/model/course-student";
 import { CourseTeacher } from "@module/repository/sequelize/model/course-teacher";
 import { ApiError } from "@config/exception/api-error";
+import { InjectModel } from "@nestjs/sequelize";
+import { CoursesModel } from "../models/courses.model";
 
 export class CoursesSqlRepository
     extends SqlRepository<Courses>
     implements CoursesRepository
 {
+    constructor(
+        @InjectModel(CoursesModel)
+        private readonly coursesModel: typeof CoursesModel,
+    ) {
+        super(coursesModel);
+    }
     async getCoursesByTeacher(teacherId: string): Promise<Courses[]> {
         // Note: Cần implement method riêng để query courses by teacher
         return [];

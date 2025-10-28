@@ -14,6 +14,7 @@ import {
     GetOneQuery,
     GetPageQuery,
     InsertManyQuery,
+    ObjectID,
     UpdateByIdQuery,
     UpdateManyQuery,
     UpdateManyResult,
@@ -106,6 +107,10 @@ export abstract class SqlRepository<E extends BaseEntity>
     ): Promise<E> {
         const partitionRecord = this.getDataPartitionRecord(query);
         Object.assign(document, partitionRecord);
+        // Tự động generate _id nếu không có hoặc là null
+        if (!document._id || document._id === null) {
+            document._id = new ObjectID().toString();
+        }
         const res = await this.model.create(document as any, {
             transaction: query?.transaction,
             include: SqlUtil.getIncludeable(query?.population),
@@ -119,7 +124,14 @@ export abstract class SqlRepository<E extends BaseEntity>
     ): Promise<{ n: number }> {
         const partitionRecord = this.getDataPartitionRecord(options);
         const res = await this.model.bulkCreate(
-            documents.map((doc) => Object.assign(doc, partitionRecord) as any),
+            documents.map((doc) => {
+                const mergedDoc = Object.assign(doc, partitionRecord) as any;
+                // Tự động generate _id nếu không có hoặc là null
+                if (!mergedDoc._id || mergedDoc._id === null) {
+                    mergedDoc._id = new ObjectID().toString();
+                }
+                return mergedDoc;
+            }),
             { transaction: options?.transaction },
         );
         return { n: res.length };

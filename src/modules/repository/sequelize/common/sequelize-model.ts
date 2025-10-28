@@ -1,3 +1,4 @@
+import { CoursesModel } from "@module/courses/models/courses.model";
 import { HamSinhMaModel } from "@module/quy-tac-ma/models/ham-sinh-ma.model";
 import { QuyTacMaModel } from "@module/quy-tac-ma/models/quy-tac-ma.model";
 import { ProblemsModel } from "@module/problems/models/problems.models";
@@ -8,6 +9,8 @@ import { UserProblemProgressModel } from "@module/user-problem-progress/models/u
 import { Model, ModelCtor } from "sequelize-typescript";
 import { AuditLogModel } from "../model/audit-log.model";
 import { AuthModel } from "../model/auth.model";
+import { CourseStudent } from "../model/course-student";
+import { CourseTeacher } from "../model/course-teacher";
 import { DataPartitionUserModel } from "../model/data-partition-user.model";
 import { DataPartitionModel } from "../model/data-partition.model";
 import { FileModel } from "../model/file.model";
@@ -37,4 +40,7 @@ export const SequelizeModel: ModelCtor<Model>[] = [
     AuditLogModel,
     DataPartitionModel,
     DataPartitionUserModel,
+    CoursesModel,
+    CourseStudent,
+    CourseTeacher,
 ];

@@ -1,7 +1,7 @@
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
 import { Controller, Get, Post, Delete, Param, Body } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
-import { ReqUser } from "@common/decorator/auth.decorator";
+import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
 import { Courses } from "../entities/courses.entity";
 import { CoursesService } from "../services/courses.service";
@@ -24,6 +24,38 @@ export class CoursesController extends BaseControllerFactory<Courses>(
             enable: true,
         },
         routes: {
+            getById: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                    SystemRole.ADMIN,
+                ],
+            },
+            getOne: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                    SystemRole.ADMIN,
+                ],
+            },
+            getMany: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                    SystemRole.ADMIN,
+                ],
+            },
+            getPage: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                    SystemRole.ADMIN,
+                ],
+            },
             create: {
                 roles: [SystemRole.TEACHER, SystemRole.ADMIN],
             },
@@ -31,7 +63,31 @@ export class CoursesController extends BaseControllerFactory<Courses>(
                 roles: [SystemRole.TEACHER, SystemRole.ADMIN],
             },
             deleteById: {
+                roles: [SystemRole.ADMIN],
+            },
+            updateByIds: {
                 roles: [SystemRole.TEACHER, SystemRole.ADMIN],
+            },
+            deleteByIds: {
+                roles: [SystemRole.ADMIN],
+            },
+            importDefinition: {
+                roles: [SystemRole.ADMIN],
+            },
+            importXlsxTemplate: {
+                roles: [SystemRole.ADMIN],
+            },
+            importInsert: {
+                roles: [SystemRole.ADMIN],
+            },
+            importValidate: {
+                roles: [SystemRole.ADMIN],
+            },
+            exportDefinition: {
+                roles: [SystemRole.ADMIN],
+            },
+            exportXlsx: {
+                roles: [SystemRole.ADMIN],
             },
         },
         dataPartition: {
@@ -44,6 +100,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get("my-teaching")
+    @AllowSystemRoles(SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Lấy danh sách khóa học tôi dạy" })
     @ApiResponse({ status: 200, description: "Danh sách khóa học thành công" })
     async getMyTeachingCourses(@ReqUser() user: User) {
@@ -51,6 +108,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get("my-enrolled")
+    @AllowSystemRoles(SystemRole.STUDENT, SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Lấy danh sách khóa học tôi tham gia" })
     @ApiResponse({ status: 200, description: "Danh sách khóa học thành công" })
     async getMyEnrolledCourses(@ReqUser() user: User) {
@@ -58,6 +116,12 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get("teacher/:teacherId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+        SystemRole.ADMIN,
+    )
     @ApiOperation({ summary: "Lấy danh sách khóa học theo giáo viên" })
     @ApiResponse({ status: 200, description: "Danh sách khóa học thành công" })
     async getCoursesByTeacher(
@@ -68,6 +132,12 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get("student/:studentId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+        SystemRole.ADMIN,
+    )
     @ApiOperation({ summary: "Lấy danh sách khóa học theo học viên" })
     @ApiResponse({ status: 200, description: "Danh sách khóa học thành công" })
     async getCoursesByStudent(
@@ -78,6 +148,12 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get("active")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+        SystemRole.ADMIN,
+    )
     @ApiOperation({ summary: "Lấy danh sách khóa học đang hoạt động" })
     @ApiResponse({ status: 200, description: "Danh sách khóa học thành công" })
     async getActiveCourses(@ReqUser() user: User) {
@@ -85,6 +161,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get(":courseId/students")
+    @AllowSystemRoles(SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Lấy danh sách học viên trong khóa học" })
     @ApiResponse({ status: 200, description: "Danh sách học viên thành công" })
     async getCourseStudents(
@@ -95,6 +172,12 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Get(":courseId/teachers")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+        SystemRole.ADMIN,
+    )
     @ApiOperation({ summary: "Lấy danh sách giáo viên trong khóa học" })
     @ApiResponse({ status: 200, description: "Danh sách giáo viên thành công" })
     async getCourseTeachers(
@@ -105,6 +188,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Post(":courseId/enroll")
+    @AllowSystemRoles(SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Đăng ký học viên vào khóa học" })
     @ApiResponse({ status: 201, description: "Đăng ký thành công" })
     async enrollStudent(
@@ -116,6 +200,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Post(":courseId/self-enroll")
+    @AllowSystemRoles(SystemRole.STUDENT, SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Tự đăng ký vào khóa học" })
     @ApiResponse({ status: 201, description: "Đăng ký thành công" })
     async selfEnroll(
@@ -127,6 +212,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Post(":courseId/assign-teacher")
+    @AllowSystemRoles(SystemRole.ADMIN)
     @ApiOperation({ summary: "Phân công giáo viên vào khóa học" })
     @ApiResponse({ status: 201, description: "Phân công thành công" })
     async assignTeacher(
@@ -138,6 +224,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Delete(":courseId/students/:studentId")
+    @AllowSystemRoles(SystemRole.TEACHER, SystemRole.ADMIN)
     @ApiOperation({ summary: "Xóa học viên khỏi khóa học" })
     @ApiResponse({ status: 200, description: "Xóa thành công" })
     async removeStudentFromCourse(
@@ -153,6 +240,7 @@ export class CoursesController extends BaseControllerFactory<Courses>(
     }
 
     @Delete(":courseId/teachers/:teacherId")
+    @AllowSystemRoles(SystemRole.ADMIN)
     @ApiOperation({ summary: "Xóa giáo viên khỏi khóa học" })
     @ApiResponse({ status: 200, description: "Xóa thành công" })
     async removeTeacherFromCourse(
