@@ -126,6 +126,34 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submissions as SubmissionResponseDto[];
     }
 
+    @Get("my-submissions/page")
+    @ApiOperation({
+        summary: "Lấy danh sách submissions của tôi với phân trang",
+    })
+    @ApiQuery({
+        name: "page",
+        required: false,
+        type: Number,
+        description: "Số trang (mặc định: 1)",
+        example: 1,
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        type: Number,
+        description: "Số lượng items mỗi trang (mặc định: 20)",
+        example: 10,
+    })
+    @ApiPageResponse(StudentSubmissions)
+    async getMySubmissionsPage(
+        @ReqUser() user: User,
+        @RequestQuery() query: GetPageQuery<StudentSubmissions>,
+    ) {
+        // Tạo conditions để lọc theo user._id
+        const conditions = { student_id: user._id };
+        return this.studentSubmissionsService.getPage(user, conditions, query);
+    }
+
     @Get("ranking")
     @ApiOperation({ summary: "Lấy bảng xếp hạng theo số bài đã giải" })
     @ApiQuery({
