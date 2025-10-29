@@ -19,6 +19,7 @@ import {
 import { UserService } from "@module/user/service/user.service";
 import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
 import { forwardRef, Inject } from "@nestjs/common";
+import { JudgeNodesService } from "@module/judge-nodes/services/judge-nodes.services";
 
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
@@ -34,6 +35,7 @@ export class StudentSubmissionsService extends BaseService<
         private readonly testCasesService: TestCasesService,
         private readonly problemsService: ProblemsService,
         private readonly userService: UserService,
+        private readonly judgeNodesService: JudgeNodesService,
         @Inject(forwardRef(() => UserProblemProgressService))
         private readonly userProblemProgressService: UserProblemProgressService,
     ) {
@@ -52,7 +54,9 @@ export class StudentSubmissionsService extends BaseService<
         this.logger.log(`Submission found: ${submission ? "yes" : "no"}`);
         if (!submission) {
             this.logger.error(`Submission not found with ID: ${id}`);
-            throw ApiError.NotFound("error-user-not-found");
+            throw ApiError.NotFound("error-setting-value-invalid", {
+                message: "Không tìm thấy submission",
+            });
         }
 
         // Làm giàu submission với thông tin user và problem
@@ -131,6 +135,50 @@ export class StudentSubmissionsService extends BaseService<
         );
 
         return enrichedSubmissions;
+    }
+
+    /**
+     * Ghi đè getPage để trả về submissions với thông tin problem đầy đủ (giống getMany)
+     */
+    async getPage(user: User, conditions: any, query: any): Promise<any> {
+        // Đảm bảo có default values cho page và limit
+        const pageQuery = {
+            ...query,
+            page: query?.page || 1,
+            limit: query?.limit || 20,
+            skip:
+                query?.skip !== undefined
+                    ? query.skip
+                    : query?.page
+                      ? (query.page - 1) * (query.limit || 20)
+                      : 0,
+            enableDataPartition: false, // Disable data partition để lấy tất cả submissions
+        };
+
+        // Lấy danh sách submissions phân trang cơ bản
+        const pageResult = await this.studentSubmissionsRepository.getPage(
+            conditions || {},
+            pageQuery,
+        );
+
+        // Làm giàu từng submission với thông tin user và problem (giống getMany)
+        if (pageResult.result && pageResult.result.length > 0) {
+            const enrichedSubmissions = await Promise.all(
+                pageResult.result.map(async (submission: any) => {
+                    return await this.enrichSubmissionWithDetails(
+                        submission,
+                        user,
+                    );
+                }),
+            );
+
+            return {
+                ...pageResult,
+                result: enrichedSubmissions,
+            };
+        }
+
+        return pageResult;
     }
 
     /**
@@ -664,6 +712,10 @@ export class StudentSubmissionsService extends BaseService<
         user: User,
         dto: SubmitCodeDto,
     ): Promise<StudentSubmissions> {
+        let selectedNode: any = null;
+        const nodeLoadIncremented = false;
+        let submissionId: string | null = null;
+
         try {
             // Kiểm tra problem có tồn tại không
             const problem = await this.problemsService.getById(
@@ -672,11 +724,13 @@ export class StudentSubmissionsService extends BaseService<
                 {},
             );
             if (!problem) {
-                throw ApiError.NotFound("error-user-not-found");
+                throw ApiError.NotFound("error-setting-value-invalid", {
+                    message: "Không tìm thấy bài tập",
+                });
             }
 
             // Tạo submission ID
-            const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
             // Tạo submission record
             this.logger.log(`Creating submission with ID: ${submissionId}`);
@@ -685,9 +739,22 @@ export class StudentSubmissionsService extends BaseService<
             this.logger.log(`Language ID: ${dto.language_id}`);
             this.logger.log(`Code length: ${dto.code.length} characters`);
 
-            // Tạo judge_node_id giả lập (có thể thay thế bằng logic chọn judge node thực tế)
-            const judgeNodeId = `judge_node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            this.logger.log(`Assigning judge node ID: ${judgeNodeId}`);
+            // Chọn judge node phù hợp nhất
+            selectedNode = await this.judgeNodesService.selectBestNode();
+            if (!selectedNode) {
+                this.logger.error("No available judge nodes found");
+                throw ApiError.BadGateway("error-setting-value-invalid", {
+                    message: "Không có Judge Node khả dụng",
+                });
+            }
+
+            this.logger.log(
+                `Selected judge node: ${selectedNode._id} (${selectedNode.name})`,
+            );
+            this.logger.log(`Judge node API URL: ${selectedNode.api_url}`);
+            this.logger.log(
+                `Judge node current load: ${selectedNode.current_load}/${selectedNode.max_capacity}`,
+            );
 
             const submission = await this.createSubmission(user, {
                 submission_id: submissionId,
@@ -696,7 +763,7 @@ export class StudentSubmissionsService extends BaseService<
                 class_id: dto.class_id,
                 code: dto.code,
                 language_id: dto.language_id,
-                judge_node_id: judgeNodeId,
+                judge_node_id: selectedNode._id,
             });
 
             this.logger.log(
@@ -739,30 +806,46 @@ export class StudentSubmissionsService extends BaseService<
             try {
                 // Kiểm tra Judge0 service có hoạt động không
                 const judge0Config = await this.judge0Service
-                    .getConfiguration()
+                    .getConfiguration(selectedNode.api_url)
                     .catch((error) => {
                         this.logger.error(
-                            `Error connecting to Judge0: ${error.message}`,
+                            `Error connecting to Judge0 at ${selectedNode.api_url}: ${error.message}`,
                         );
                         return null;
                     });
 
                 if (!judge0Config) {
-                    this.logger.error(`Judge0 service is not available`);
+                    this.logger.error(
+                        `Judge0 service is not available at ${selectedNode.api_url}`,
+                    );
+                    // Giảm load vì đã tăng trước đó
+                    if (nodeLoadIncremented) {
+                        try {
+                            await this.judgeNodesService.decrementLoad(
+                                selectedNode._id,
+                            );
+                        } catch (decrementError) {
+                            this.logger.error(
+                                `Failed to decrement load: ${decrementError.message}`,
+                            );
+                        }
+                    }
                     // Cập nhật submission status
                     await this.updateSubmissionResult(submissionId, {
                         status: SubmissionStatus.INTERNAL_ERROR,
-                        error_message: "Judge0 service is not available",
+                        error_message: `Judge0 service is not available at ${selectedNode.api_url}`,
                     });
 
                     // Trả về submission đã tạo
-                    return this.studentSubmissionsRepository.getById(
-                        submissionId,
+                    return this.studentSubmissionsRepository.getOne(
+                        { submission_id: submissionId },
                         {},
                     );
                 }
 
-                this.logger.log(`Judge0 service is available`);
+                this.logger.log(
+                    `Judge0 service is available at ${selectedNode.api_url}`,
+                );
             } catch (error) {
                 this.logger.error(
                     `Error checking Judge0 service: ${error.message}`,
@@ -785,10 +868,12 @@ export class StudentSubmissionsService extends BaseService<
                     };
 
                     this.logger.log(
-                        `Submitting test case ${index + 1}/${testCases.length} to Judge0`,
+                        `Submitting test case ${index + 1}/${testCases.length} to Judge0 at ${selectedNode.api_url}`,
                     );
-                    const judge0Response =
-                        await this.judge0Service.submitCode(judge0Request);
+                    const judge0Response = await this.judge0Service.submitCode(
+                        judge0Request,
+                        selectedNode.api_url,
+                    );
                     this.logger.log(
                         `Test case ${index + 1} submitted successfully, token: ${judge0Response.token}`,
                     );
@@ -836,7 +921,27 @@ export class StudentSubmissionsService extends BaseService<
             );
 
             // Polling để lấy kết quả từ Judge0
-            await this.pollJudge0Results(submissionId, validResults);
+            await this.pollJudge0Results(
+                submissionId,
+                validResults,
+                selectedNode.api_url,
+            );
+
+            // Giảm load của node sau khi polling hoàn thành
+            if (nodeLoadIncremented) {
+                try {
+                    await this.judgeNodesService.decrementLoad(
+                        selectedNode._id,
+                    );
+                    this.logger.log(
+                        `Decremented load for judge node: ${selectedNode._id}`,
+                    );
+                } catch (error) {
+                    this.logger.error(
+                        `Failed to decrement load for node ${selectedNode._id}: ${error.message}`,
+                    );
+                }
+            }
 
             // Lấy submission đã được tạo trực tiếp từ repository
             this.logger.log(
@@ -889,6 +994,23 @@ export class StudentSubmissionsService extends BaseService<
         } catch (error) {
             this.logger.error(`Error in submitCode: ${error.message}`);
             this.logger.error(`Error stack: ${error.stack}`);
+
+            // Đảm bảo giảm load nếu đã tăng nhưng có lỗi
+            if (nodeLoadIncremented && selectedNode) {
+                try {
+                    await this.judgeNodesService.decrementLoad(
+                        selectedNode._id,
+                    );
+                    this.logger.log(
+                        `Decremented load for judge node ${selectedNode._id} due to error`,
+                    );
+                } catch (decrementError) {
+                    this.logger.error(
+                        `Failed to decrement load on error: ${decrementError.message}`,
+                    );
+                }
+            }
+
             throw error;
         }
     }
@@ -903,6 +1025,7 @@ export class StudentSubmissionsService extends BaseService<
             judge0Response: any;
             index: number;
         }>,
+        apiUrl?: string,
     ): Promise<void> {
         const maxAttempts = 30; // Tối đa 30 lần polling
         const pollInterval = 2000; // 2 giây
@@ -919,6 +1042,7 @@ export class StudentSubmissionsService extends BaseService<
                     const judge0Result =
                         await this.judge0Service.getSubmissionResult(
                             result.judge0Response.token,
+                            apiUrl,
                         );
 
                     if (
@@ -1018,7 +1142,9 @@ export class StudentSubmissionsService extends BaseService<
             {},
         );
         if (!submission) {
-            throw ApiError.NotFound("error-user-not-found");
+            throw ApiError.NotFound("error-setting-value-invalid", {
+                message: "Không tìm thấy submission",
+            });
         }
 
         if (!submission.submission_token) {

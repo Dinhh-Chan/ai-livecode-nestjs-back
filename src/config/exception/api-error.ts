@@ -50,6 +50,10 @@ export class ApiError extends Error {
         return new ApiError(code, HttpStatus.CONFLICT, args);
     }
 
+    static BadGateway(code: ErrorCode, args?: { [field: string]: unknown }) {
+        return new ApiError(code, HttpStatus.BAD_GATEWAY, args);
+    }
+
     static UnsupportedMediaType(
         code: ErrorCode,
         args?: { [field: string]: unknown },

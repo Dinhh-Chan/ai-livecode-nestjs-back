@@ -96,6 +96,7 @@ export class Judge0Service {
      */
     async submitCode(
         request: Judge0SubmissionRequest,
+        customApiUrl?: string,
     ): Promise<Judge0SubmissionResponse> {
         try {
             const headers: Record<string, string> = {
@@ -106,7 +107,8 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
-            const apiUrl = `${this.baseUrl}/submissions`;
+            const baseUrl = customApiUrl || this.baseUrl;
+            const apiUrl = `${baseUrl}/submissions`;
             this.logger.log(`Sending request to Judge0 API: ${apiUrl}`);
             this.logger.log(`Request headers: ${JSON.stringify(headers)}`);
             this.logger.log(`Request language_id: ${request.language_id}`);
@@ -165,6 +167,7 @@ export class Judge0Service {
      */
     async getSubmissionResult(
         token: string,
+        customApiUrl?: string,
     ): Promise<Judge0SubmissionResponse> {
         try {
             const headers: Record<string, string> = {};
@@ -173,7 +176,8 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
-            const apiUrl = `${this.baseUrl}/submissions/${token}`;
+            const baseUrl = customApiUrl || this.baseUrl;
+            const apiUrl = `${baseUrl}/submissions/${token}`;
             this.logger.log(
                 `Getting submission result from Judge0 API: ${apiUrl}`,
             );
@@ -270,7 +274,7 @@ export class Judge0Service {
     /**
      * Lấy thông tin cấu hình Judge0
      */
-    async getConfiguration(): Promise<any> {
+    async getConfiguration(customApiUrl?: string): Promise<any> {
         try {
             const headers: Record<string, string> = {};
 
@@ -278,7 +282,8 @@ export class Judge0Service {
                 headers["X-Auth-Token"] = this.authToken;
             }
 
-            const apiUrl = `${this.baseUrl}/config_info`;
+            const baseUrl = customApiUrl || this.baseUrl;
+            const apiUrl = `${baseUrl}/config_info`;
             this.logger.log(`Getting Judge0 configuration from: ${apiUrl}`);
 
             const response = await firstValueFrom(

@@ -13,12 +13,15 @@ import { SubmitCodeDto } from "../dto/submit-code.dto";
 import { SubmissionResponseDto } from "../dto/submission-response.dto";
 import { RankingResponseDto } from "../dto/ranking-response.dto";
 import { RankingRecordDto } from "../dto/ranking-record.dto";
-import { GetManyQuery } from "@common/constant";
+import { GetManyQuery, GetPageQuery } from "@common/constant";
 import {
     RequestCondition,
     RequestQuery,
 } from "@common/decorator/query.decorator";
-import { ApiListResponse } from "@common/decorator/api.decorator";
+import {
+    ApiListResponse,
+    ApiPageResponse,
+} from "@common/decorator/api.decorator";
 import { AllowSystemRoles } from "@common/decorator/auth.decorator";
 
 @Controller("student-submissions")
@@ -35,10 +38,10 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
                 roles: [SystemRole.USER, SystemRole.ADMIN],
             },
             getMany: {
-                enable: false, // Disable để tránh xung đột với route custom
+                enable: false,
             },
             getPage: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                enable: false,
             },
             create: {
                 roles: [SystemRole.USER, SystemRole.ADMIN],
@@ -56,6 +59,21 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         private readonly studentSubmissionsService: StudentSubmissionsService,
     ) {
         super(studentSubmissionsService);
+    }
+
+    // Route cụ thể "page" phải được đặt trước route có parameter ":submissionId"
+    @Get("page")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Lấy danh sách submissions phân trang",
+    })
+    @ApiPageResponse(StudentSubmissions)
+    async getPage(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionStudentSubmissionsDto) conditions: any,
+        @RequestQuery() query: GetPageQuery<StudentSubmissions>,
+    ) {
+        return this.studentSubmissionsService.getPage(user, conditions, query);
     }
 
     @Get("many")
@@ -214,7 +232,8 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submissions as SubmissionResponseDto[];
     }
 
-    @Get(":submissionId/result")
+    // Routes với prefix "submission/" để tránh conflict với route "page"
+    @Get("submission/:submissionId/result")
     @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
     @ApiResponse({
         status: 200,
@@ -233,7 +252,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         return submission as SubmissionResponseDto;
     }
 
-    @Get(":submissionId")
+    @Get("submission/:submissionId")
     @ApiOperation({ summary: "Lấy thông tin submission theo ID" })
     @ApiResponse({
         status: 200,

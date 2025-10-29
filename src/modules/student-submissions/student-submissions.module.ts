@@ -12,6 +12,7 @@ import { ProblemsModule } from "@module/problems/problems.module";
 import { HttpModule } from "@nestjs/axios";
 import { UserModule } from "@module/user/user.module";
 import { UserProblemProgressModule } from "@module/user-problem-progress/user-problem-progress.module";
+import { JudgeNodesModule } from "@module/judge-nodes/judge-nodes.module";
 
 @Module({
     imports: [
@@ -19,6 +20,7 @@ import { UserProblemProgressModule } from "@module/user-problem-progress/user-pr
         HttpModule,
         TestCasesModule,
         ProblemsModule,
+        JudgeNodesModule,
         forwardRef(() => UserModule),
         forwardRef(() => UserProblemProgressModule),
     ],
