@@ -120,7 +120,7 @@ export class UserProblemProgressController extends BaseControllerFactory<UserPro
     }
 
     // Custom endpoints cho user progress
-    @Get("my-progress")
+    @Get("my-progress/summary")
     @AllowSystemRoles(
         SystemRole.USER,
         SystemRole.ADMIN,
@@ -133,10 +133,18 @@ export class UserProblemProgressController extends BaseControllerFactory<UserPro
         description:
             "API để lấy tổng quan về tiến độ làm bài của user hiện tại",
     })
-    async getMyProgress(
-        @ReqUser() user: User,
-    ): Promise<UserProgressSummaryDto> {
-        return this.userProblemProgressService.getUserProgressSummary(user._id);
+    async getMyProgress(@ReqUser() user: User): Promise<any> {
+        const summary =
+            await this.userProblemProgressService.getUserProgressSummary(
+                user._id,
+            );
+        const solved = await this.userProblemProgressService.getSolvedProblems(
+            user._id,
+        );
+        return {
+            ...summary,
+            solved_problems: solved,
+        };
     }
 
     @Get("my-progress/solved")

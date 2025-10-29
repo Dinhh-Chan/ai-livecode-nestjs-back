@@ -791,13 +791,11 @@ export class StudentSubmissionsService extends BaseService<
                 );
                 throw ApiError.BadRequest("error-setting-value-invalid");
             }
-
             // Cập nhật total test cases
             await this.updateSubmissionResult(submissionId, {
                 status: SubmissionStatus.PENDING,
                 total_test_cases: testCases.length,
             });
-
             // Gửi submission đến Judge0 cho từng test case
             this.logger.log(
                 `Sending submission to Judge0 for ${testCases.length} test cases`,
@@ -1086,30 +1084,62 @@ export class StudentSubmissionsService extends BaseService<
 
             if (allCompleted) {
                 // Tính điểm
-                const score = this.judge0Service.calculateScore(
+                const finalStatus =
                     testCasesPassed === results.length
                         ? SubmissionStatus.ACCEPTED
-                        : SubmissionStatus.WRONG_ANSWER,
+                        : SubmissionStatus.WRONG_ANSWER;
+                const score = this.judge0Service.calculateScore(
+                    finalStatus,
                     testCasesPassed,
                     results.length,
                 );
 
+                // Lấy thông tin submission để có student_id và problem_id
+                const submission =
+                    await this.studentSubmissionsRepository.getOne(
+                        { submission_id: submissionId },
+                        {},
+                    );
+
                 // Cập nhật kết quả cuối cùng
-                await this.updateSubmissionResult(submissionId, {
-                    status:
-                        testCasesPassed === results.length
-                            ? SubmissionStatus.ACCEPTED
-                            : SubmissionStatus.WRONG_ANSWER,
-                    score,
-                    execution_time_ms: Math.round(totalExecutionTime),
-                    memory_used_mb: Math.round(totalMemoryUsed * 100) / 100,
-                    test_cases_passed: testCasesPassed,
-                    total_test_cases: results.length,
-                    error_message: errorMessage.trim() || undefined,
-                });
+                const updatedSubmission = await this.updateSubmissionResult(
+                    submissionId,
+                    {
+                        status: finalStatus,
+                        score,
+                        execution_time_ms: Math.round(totalExecutionTime),
+                        memory_used_mb: Math.round(totalMemoryUsed * 100) / 100,
+                        test_cases_passed: testCasesPassed,
+                        total_test_cases: results.length,
+                        error_message: errorMessage.trim() || undefined,
+                    },
+                );
+
+                // Nếu submission được ACCEPTED, cập nhật user_problem_progress với is_solved = true
+                if (finalStatus === SubmissionStatus.ACCEPTED && submission) {
+                    try {
+                        await this.userProblemProgressService.updateProgressOnSubmission(
+                            submission.student_id,
+                            {
+                                problem_id: submission.problem_id,
+                                status: finalStatus,
+                                score,
+                            },
+                        );
+
+                        this.logger.log(
+                            `Updated user_problem_progress: user ${submission.student_id}, problem ${submission.problem_id}, is_solved = true`,
+                        );
+                    } catch (error) {
+                        this.logger.error(
+                            `Failed to update user_problem_progress for user ${submission.student_id} on problem ${submission.problem_id}: ${error.message}`,
+                        );
+                        // Không throw error để không ảnh hưởng đến submission
+                    }
+                }
 
                 this.logger.log(
-                    `Submission ${submissionId} completed with score ${score}`,
+                    `Submission ${submissionId} completed with score ${score}, status: ${finalStatus}`,
                 );
                 return;
             }
