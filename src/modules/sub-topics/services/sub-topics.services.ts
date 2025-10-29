@@ -32,6 +32,39 @@ export class SubTopicsService extends BaseService<
     ) {
         return this.getMany(user, { topic_id: topicId }, query);
     }
+
+    /**
+     * Lấy sub-topics theo topic ID, chỉ giữ các sub-topic có ít nhất 1 problem
+     */
+    async getByTopicIdHasProblems(
+        user: User,
+        topicId: string,
+        query?: GetManyQuery<SubTopics> & BaseQueryOption<unknown>,
+    ) {
+        const subTopics = await this.getMany(
+            user,
+            { topic_id: topicId },
+            query,
+        );
+        if (!subTopics?.length) return [];
+
+        const results: SubTopics[] = [];
+        for (const st of subTopics) {
+            try {
+                const count =
+                    await this.problemsService.countProblemsBySubTopic(
+                        user,
+                        st._id,
+                    );
+                if (count > 0) {
+                    results.push(st);
+                }
+            } catch (_) {
+                // skip on error
+            }
+        }
+        return results;
+    }
     async getPage(
         user: User,
         conditions: any,

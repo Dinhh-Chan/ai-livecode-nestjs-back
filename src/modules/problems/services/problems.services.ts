@@ -1,7 +1,7 @@
 import { BaseService } from "@config/service/base.service";
 import { Problems } from "../entities/problems.entity";
 import { ProblemsRepository } from "../repository/problems-repository.interface";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
@@ -9,6 +9,7 @@ import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { TestCasesService } from "../../test-cases/services/test-cases.services";
 import { CreateTestCasesDto } from "../../test-cases/dto/create-test-cases.dto";
 import { CreateTestCasesWithoutProblemIdDto } from "../dto/create-test-cases-without-problem-id.dto";
+import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
 
 @Injectable()
 export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
@@ -18,8 +19,36 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
         @InjectRepository(Entity.PROBLEMS)
         private readonly problemsRepository: ProblemsRepository,
         private readonly testCasesService: TestCasesService,
+        @Inject(forwardRef(() => UserProblemProgressService))
+        private readonly userProblemProgressService: UserProblemProgressService,
     ) {
         super(problemsRepository);
+    }
+
+    async getPage(user: User, conditions: any, query: any): Promise<any> {
+        const page = await super.getPage(user, conditions, query);
+        if (!user?._id || !page?.result?.length) return page;
+
+        const solved = await this.userProblemProgressService.getSolvedProblems(
+            user._id,
+        );
+        const solvedSet = new Set((solved || []).map((p: any) => p.problem_id));
+        page.result = page.result.map((p: any) => ({
+            ...p,
+            is_done: solvedSet.has(p._id),
+        }));
+        return page;
+    }
+
+    async getMany(user: User, conditions: any, query: any): Promise<any[]> {
+        const list = await super.getMany(user, conditions, query);
+        if (!user?._id || !list?.length) return list;
+
+        const solved = await this.userProblemProgressService.getSolvedProblems(
+            user._id,
+        );
+        const solvedSet = new Set((solved || []).map((p: any) => p.problem_id));
+        return list.map((p: any) => ({ ...p, is_done: solvedSet.has(p._id) }));
     }
 
     /**

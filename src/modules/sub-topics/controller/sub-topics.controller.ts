@@ -75,9 +75,10 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         SystemRole.TEACHER,
     )
     @ApiOperation({
-        summary: "Lấy danh sách sub-topics theo topic ID",
+        summary:
+            "Lấy danh sách sub-topics theo topic ID (chỉ những sub-topic có problems)",
         description:
-            "API để lấy danh sách tất cả sub-topics thuộc về một topic cụ thể",
+            "API trả về các sub-topics của topic, loại bỏ sub-topics không có problems",
     })
     @ApiParam({
         name: "topicId",
@@ -119,7 +120,11 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
         @Param("topicId") topicId: string,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getByTopicId(user, topicId, query);
+        return this.subTopicsService.getByTopicIdHasProblems(
+            user,
+            topicId,
+            query,
+        );
     }
 
     @Get("page")
