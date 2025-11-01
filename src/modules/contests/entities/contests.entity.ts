@@ -9,8 +9,15 @@ import {
     IsNumber,
     IsDateString,
     IsBoolean,
+    IsEnum,
 } from "class-validator";
 import { HydratedDocument } from "mongoose";
+
+export enum ContestType {
+    PRACTICE = "practice",
+    EXAM = "exam",
+    TEST = "test",
+}
 
 @Schema({
     collection: Entity.CONTESTS,
@@ -97,6 +104,18 @@ export class Contests implements BaseEntity {
     @Prop({ default: 0 })
     @EntityDefinition.field({ label: "Thứ tự sắp xếp" })
     order_index: number;
+
+    /**
+     * Loại cuộc thi (practice/exam/test)
+     */
+    @IsEnum(ContestType)
+    @Prop({ default: ContestType.PRACTICE })
+    @EntityDefinition.field({
+        label: "Loại cuộc thi",
+        enum: Object.values(ContestType),
+        example: ContestType.PRACTICE,
+    })
+    type: ContestType;
 
     // Virtual fields for relationships
     @EntityDefinition.field({

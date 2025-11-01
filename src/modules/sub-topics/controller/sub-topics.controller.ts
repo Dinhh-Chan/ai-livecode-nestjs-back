@@ -57,14 +57,20 @@ export class SubTopicsController extends BaseControllerFactory<SubTopics>(
 
     @Get("many")
     @AllowSystemRoles(SystemRole.ADMIN, SystemRole.STUDENT, SystemRole.TEACHER)
-    @ApiOperation({ summary: "Lấy danh sách sub-topics" })
+    @ApiOperation({
+        summary: "Lấy danh sách sub-topics (chỉ sub-topics có problems)",
+    })
     @ApiListResponse(SubTopics)
     async getMany(
         @ReqUser() user: User,
         @RequestCondition(ConditionSubTopicsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<SubTopics>,
     ) {
-        return this.subTopicsService.getMany(user, conditions, query);
+        return this.subTopicsService.getManyHasProblems(
+            user,
+            conditions,
+            query,
+        );
     }
 
     @Get("by-topic/:topicId")

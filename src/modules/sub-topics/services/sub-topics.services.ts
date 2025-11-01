@@ -65,6 +65,35 @@ export class SubTopicsService extends BaseService<
         }
         return results;
     }
+
+    /**
+     * Lấy sub-topics theo điều kiện, chỉ giữ các sub-topic có ít nhất 1 problem
+     */
+    async getManyHasProblems(
+        user: User,
+        conditions: any,
+        query?: GetManyQuery<SubTopics> & BaseQueryOption<unknown>,
+    ) {
+        const subTopics = await this.getMany(user, conditions || {}, query);
+        if (!subTopics?.length) return [];
+
+        const results: SubTopics[] = [];
+        for (const st of subTopics) {
+            try {
+                const count =
+                    await this.problemsService.countProblemsBySubTopic(
+                        user,
+                        st._id,
+                    );
+                if (count > 0) {
+                    results.push(st);
+                }
+            } catch (_) {
+                // skip on error
+            }
+        }
+        return results;
+    }
     async getPage(
         user: User,
         conditions: any,

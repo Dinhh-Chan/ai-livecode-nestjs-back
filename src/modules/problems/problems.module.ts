@@ -9,10 +9,12 @@ import { SequelizeModule } from "@nestjs/sequelize";
 import { ProblemsRepositorySql } from "./repository/problems-repository.sql";
 import { TestCasesModule } from "../test-cases/test-cases.module";
 import { UserProblemProgressModule } from "@module/user-problem-progress/user-problem-progress.module";
+import { UserProblemProgressRepositorySql } from "@module/user-problem-progress/repository/user-problem-progress-repository.sql";
+import { UserProblemProgressModel } from "@module/user-problem-progress/models/user-problem-progress.model";
 
 @Module({
     imports: [
-        SequelizeModule.forFeature([ProblemsModel]),
+        SequelizeModule.forFeature([ProblemsModel, UserProblemProgressModel]),
         TestCasesModule,
         forwardRef(() => UserProblemProgressModule),
     ],
@@ -21,6 +23,10 @@ import { UserProblemProgressModule } from "@module/user-problem-progress/user-pr
         ProblemsService,
         ProblemsCountService,
         RepositoryProvider(Entity.PROBLEMS, ProblemsRepositorySql),
+        RepositoryProvider(
+            Entity.USER_PROBLEM_PROGRESS,
+            UserProblemProgressRepositorySql,
+        ),
     ],
     exports: [ProblemsService, ProblemsCountService],
 })

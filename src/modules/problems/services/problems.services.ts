@@ -10,6 +10,7 @@ import { TestCasesService } from "../../test-cases/services/test-cases.services"
 import { CreateTestCasesDto } from "../../test-cases/dto/create-test-cases.dto";
 import { CreateTestCasesWithoutProblemIdDto } from "../dto/create-test-cases-without-problem-id.dto";
 import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
+import { UserProblemProgressRepository } from "@module/user-problem-progress/repository/user-problem-progress-repository.interface";
 
 @Injectable()
 export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
@@ -21,6 +22,8 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
         private readonly testCasesService: TestCasesService,
         @Inject(forwardRef(() => UserProblemProgressService))
         private readonly userProblemProgressService: UserProblemProgressService,
+        @InjectRepository(Entity.USER_PROBLEM_PROGRESS)
+        private readonly userProblemProgressRepository: UserProblemProgressRepository,
     ) {
         super(problemsRepository);
     }
@@ -160,5 +163,33 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
         }
 
         return counts;
+    }
+
+    /**
+     * Ghi đè deleteById để xóa UserProblemProgress liên quan trước khi xóa problem
+     */
+    async deleteById(user: User, id: string, query?: any): Promise<Problems> {
+        this.logger.log(`Deleting problem ${id} with related records`);
+
+        // Xóa tất cả UserProblemProgress liên quan đến problem này
+        try {
+            // Sử dụng repository trực tiếp để xóa records
+            const deleteResult =
+                await this.userProblemProgressRepository.deleteMany(
+                    { problem_id: id } as any,
+                    {},
+                );
+            this.logger.log(
+                `Deleted ${deleteResult.deleted || 0} UserProblemProgress records for problem ${id}`,
+            );
+        } catch (error) {
+            this.logger.error(
+                `Error deleting UserProblemProgress for problem ${id}: ${error.message}`,
+            );
+            // Không throw error để tiếp tục xóa problem
+        }
+
+        // Gọi super.deleteById để xóa problem
+        return super.deleteById(user, id, query);
     }
 }

@@ -1,7 +1,7 @@
 import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
 import { Column, DataType, Model, Table } from "sequelize-typescript";
-import { Contests } from "../entities/contests.entity";
+import { Contests, ContestType } from "../entities/contests.entity";
 
 @Table({
     tableName: Entity.CONTESTS,
@@ -82,6 +82,14 @@ export class ContestsModel extends Model implements Contests {
         field: "_order_index",
     })
     order_index: number;
+
+    @Column({
+        type: DataType.ENUM(...Object.values(ContestType)),
+        allowNull: false,
+        defaultValue: ContestType.PRACTICE,
+        field: "_type",
+    })
+    type: ContestType;
 
     // Virtual fields for relationships
     contest_users?: any[];

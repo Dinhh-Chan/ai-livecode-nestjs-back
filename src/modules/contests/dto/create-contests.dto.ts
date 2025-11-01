@@ -5,8 +5,10 @@ import {
     IsOptional,
     IsDateString,
     IsBoolean,
+    IsEnum,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
+import { ContestType } from "../entities/contests.entity";
 
 export class CreateContestsDto {
     @IsString()
@@ -53,4 +55,13 @@ export class CreateContestsDto {
     @IsOptional()
     @EntityDefinition.field({ label: "Thứ tự sắp xếp" })
     order_index?: number;
+
+    @IsEnum(ContestType)
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Loại cuộc thi",
+        enum: Object.values(ContestType),
+        example: ContestType.PRACTICE,
+    })
+    type?: ContestType;
 }
