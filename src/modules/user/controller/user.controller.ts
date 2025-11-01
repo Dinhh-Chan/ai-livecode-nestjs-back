@@ -8,6 +8,7 @@ import { Request } from "express";
 import { ChangePasswordDto } from "../dto/change-password.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
 import { SystemStatisticsDto } from "../dto/system-statistics.dto";
+import { UserProfileDto } from "../dto/user-profile.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
 
@@ -96,6 +97,19 @@ export class UserController extends BaseControllerFactory<User>(
     })
     async getSystemStatistics() {
         return this.userService.getSystemStatistics();
+    }
+
+    @Get("profile-me/user")
+    @ApiRecordResponse(UserProfileDto)
+    @ApiOperation({
+        summary: "Lấy thông tin profile của user hiện tại",
+        description:
+            "API để lấy thông tin profile đầy đủ của user bao gồm: rank, số bài AC theo độ khó, số bài AC theo ngôn ngữ, recent AC, và skills",
+    })
+    async getProfileMe(@Req() req: Request) {
+        const authData = req.user as RequestAuthData;
+        const user = await authData.getUser();
+        return this.userService.getUserProfile(user);
     }
 
     // @Get("test")

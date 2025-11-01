@@ -13,8 +13,14 @@ import { StudentSubmissionsService } from "@module/student-submissions/services/
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
 import { ProblemsService } from "@module/problems/services/problems.services";
 import { ProblemsCountService } from "@module/problems/services/problems-count.service";
+import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
 import { CreateUserDto } from "@module/user/dto/create-user.dto";
 import { UserRepository } from "@module/user/repository/user-repository.interface";
+import { UserProfileDto } from "../dto/user-profile.dto";
+import { LanguageStatDto } from "../dto/language-stat.dto";
+import { RecentACDto } from "../dto/recent-ac.dto";
+import { SkillStatDto } from "../dto/skill-stat.dto";
+import { ProblemDifficulty } from "@module/problems/entities/problems.entity";
 import {
     Injectable,
     Logger,
@@ -50,6 +56,8 @@ export class UserService
         private readonly problemsService: ProblemsService,
         @Inject(forwardRef(() => ProblemsCountService))
         private readonly problemsCountService: ProblemsCountService,
+        @Inject(forwardRef(() => UserProblemProgressService))
+        private readonly userProblemProgressService: UserProblemProgressService,
     ) {
         super(userRepository, {
             notFoundCode: "error-user-not-found",
@@ -957,6 +965,201 @@ export class UserService
             solved: solvedProblems.size,
             total: 699,
             attempting: attemptedProblems.size - solvedProblems.size,
+        };
+    }
+
+    async getUserProfile(user: User): Promise<UserProfileDto> {
+        const userId = user._id;
+
+        // 1. Lấy tất cả các bài đã AC của user với thông tin problem và sub_topic
+        const solvedProgresses = await this.userProblemProgressService.getMany(
+            {} as any,
+            { user_id: userId, is_solved: true } as any,
+            {
+                population: [
+                    {
+                        path: "problem",
+                        population: [{ path: "sub_topic" }],
+                    },
+                ],
+                sort: { solved_at: -1 },
+            },
+        );
+
+        const totalSolved = solvedProgresses.length;
+
+        // 2. Tính rank - số user có số bài AC > số bài AC của user hiện tại
+        const allUsersStats = await this.userProblemProgressService.getMany(
+            {} as any,
+            { is_solved: true } as any,
+            {},
+        );
+
+        // Đếm số bài AC của từng user
+        const userACCount: Record<string, number> = {};
+        allUsersStats.forEach((progress: any) => {
+            const uid = progress.user_id;
+            userACCount[uid] = (userACCount[uid] || 0) + 1;
+        });
+
+        // Đếm số user có số bài AC >= user hiện tại
+        let rank = 1;
+        const currentUserAC = totalSolved;
+        for (const [uid, acCount] of Object.entries(userACCount)) {
+            if (uid !== userId && acCount > currentUserAC) {
+                rank++;
+            }
+        }
+
+        // 3. Tính số bài theo độ khó (solved và total)
+        let easyAC = 0;
+        let mediumAC = 0;
+        let hardAC = 0;
+
+        solvedProgresses.forEach((progress: any) => {
+            const difficulty = progress.problem?.difficulty;
+            if (difficulty === ProblemDifficulty.EASY || difficulty === 2) {
+                easyAC++;
+            } else if (
+                difficulty === ProblemDifficulty.NORMAL ||
+                difficulty === 3
+            ) {
+                mediumAC++;
+            } else if (
+                difficulty === ProblemDifficulty.HARD ||
+                difficulty === ProblemDifficulty.VERY_HARD ||
+                difficulty === 4 ||
+                difficulty === 5
+            ) {
+                hardAC++;
+            }
+        });
+
+        // Đếm tổng số bài theo độ khó từ Problems repository
+        const allProblems = await this.problemsService.getMany(
+            user,
+            { is_active: true, is_public: true } as any,
+            {},
+        );
+
+        let easyTotal = 0;
+        let mediumTotal = 0;
+        let hardTotal = 0;
+
+        allProblems.forEach((problem: any) => {
+            const difficulty = problem.difficulty;
+            if (difficulty === ProblemDifficulty.EASY || difficulty === 2) {
+                easyTotal++;
+            } else if (
+                difficulty === ProblemDifficulty.NORMAL ||
+                difficulty === 3
+            ) {
+                mediumTotal++;
+            } else if (
+                difficulty === ProblemDifficulty.HARD ||
+                difficulty === ProblemDifficulty.VERY_HARD ||
+                difficulty === 4 ||
+                difficulty === 5
+            ) {
+                hardTotal++;
+            }
+        });
+
+        // 4. Tính số bài AC theo ngôn ngữ từ submissions
+        // Lấy tất cả submissions đã AC của user
+        const acceptedSubmissions =
+            await this.studentSubmissionsService.getMany(
+                user,
+                {
+                    student_id: userId,
+                    status: SubmissionStatus.ACCEPTED,
+                } as any,
+                { limit: 10000 },
+            );
+
+        // Map language_id sang tên ngôn ngữ
+        const languageIdToName: Record<number, string> = {
+            71: "python",
+            63: "javascript",
+            62: "java",
+            54: "cpp",
+            50: "c",
+            51: "csharp",
+            60: "go",
+            73: "rust",
+            68: "php",
+            72: "ruby",
+            83: "swift",
+            78: "kotlin",
+            74: "typescript",
+        };
+
+        // Đếm số bài unique đã AC theo từng ngôn ngữ
+        const languageProblemCount: Record<string, Set<string>> = {};
+        acceptedSubmissions.forEach((submission: any) => {
+            const langName =
+                languageIdToName[submission.language_id] ||
+                `lang_${submission.language_id}`;
+            if (!languageProblemCount[langName]) {
+                languageProblemCount[langName] = new Set();
+            }
+            languageProblemCount[langName].add(submission.problem_id);
+        });
+
+        const languages: LanguageStatDto[] = Object.entries(
+            languageProblemCount,
+        ).map(([language, problemIds]) => ({
+            language,
+            problems_solved: problemIds.size,
+        }));
+
+        // 5. Recent AC - lấy 10 bài gần nhất
+        const recentAC: RecentACDto[] = solvedProgresses
+            .slice(0, 10)
+            .map((progress: any) => ({
+                problem_id: progress.problem_id,
+                problem_name: progress.problem?.name || "Unknown",
+                solved_at: progress.solved_at || new Date(),
+            }));
+
+        // 6. Skills - đếm số bài AC theo subtopic
+        const subtopicCount: Record<
+            string,
+            { sub_topic_id: string; sub_topic_name: string; count: number }
+        > = {};
+        solvedProgresses.forEach((progress: any) => {
+            const subTopic = progress.problem?.sub_topic;
+            if (subTopic && subTopic._id) {
+                const subTopicId = subTopic._id;
+                if (!subtopicCount[subTopicId]) {
+                    subtopicCount[subTopicId] = {
+                        sub_topic_id: subTopicId,
+                        sub_topic_name: subTopic.sub_topic_name || "Unknown",
+                        count: 0,
+                    };
+                }
+                subtopicCount[subTopicId].count++;
+            }
+        });
+
+        const skills: SkillStatDto[] = Object.values(subtopicCount).map(
+            (item) => ({
+                sub_topic_id: item.sub_topic_id,
+                sub_topic_name: item.sub_topic_name,
+                problems_solved: item.count,
+            }),
+        );
+
+        return {
+            rank,
+            username: user.username,
+            fullname: user.fullname,
+            easy_ac: { solved: easyAC, total: easyTotal },
+            medium_ac: { solved: mediumAC, total: mediumTotal },
+            hard_ac: { solved: hardAC, total: hardTotal },
+            languages,
+            recent_ac: recentAC,
+            skills,
         };
     }
 }
