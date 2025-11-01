@@ -17,9 +17,9 @@ import { UserProblemProgressService } from "@module/user-problem-progress/servic
 import { CreateUserDto } from "@module/user/dto/create-user.dto";
 import { UserRepository } from "@module/user/repository/user-repository.interface";
 import { UserProfileDto } from "../dto/user-profile.dto";
-import { LanguageStatDto } from "../dto/language-stat.dto";
-import { RecentACDto } from "../dto/recent-ac.dto";
-import { SkillStatDto } from "../dto/skill-stat.dto";
+import type { LanguageStatDto } from "../dto/language-stat.dto";
+import type { RecentACDto } from "../dto/recent-ac.dto";
+import type { SkillStatDto } from "../dto/skill-stat.dto";
 import { ProblemDifficulty } from "@module/problems/entities/problems.entity";
 import {
     Injectable,
