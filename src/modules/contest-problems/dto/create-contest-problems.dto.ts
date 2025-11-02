@@ -4,7 +4,6 @@ import {
     IsNumber,
     IsOptional,
     IsBoolean,
-    IsDateString,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
 
@@ -33,14 +32,4 @@ export class CreateContestProblemsDto {
     @IsOptional()
     @EntityDefinition.field({ label: "Hiển thị trong contest" })
     is_visible?: boolean;
-
-    @IsDateString()
-    @IsOptional()
-    @EntityDefinition.field({ label: "Thời gian bắt đầu submit" })
-    start_time?: Date;
-
-    @IsDateString()
-    @IsOptional()
-    @EntityDefinition.field({ label: "Thời gian kết thúc submit" })
-    end_time?: Date;
 }

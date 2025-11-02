@@ -72,18 +72,4 @@ export class ContestProblemsModel extends Model implements ContestProblems {
         field: "_is_visible",
     })
     is_visible: boolean;
-
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-        field: "_start_time",
-    })
-    start_time?: Date;
-
-    @Column({
-        type: DataType.DATE,
-        allowNull: true,
-        field: "_end_time",
-    })
-    end_time?: Date;
 }

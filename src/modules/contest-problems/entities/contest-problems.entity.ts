@@ -56,22 +56,6 @@ export class ContestProblems implements BaseEntity {
     @Prop({ default: true })
     @EntityDefinition.field({ label: "Hiển thị trong contest" })
     is_visible: boolean;
-
-    /**
-     * Thời gian bắt đầu cho phép submit (nếu có)
-     */
-    @IsOptional()
-    @Prop()
-    @EntityDefinition.field({ label: "Thời gian bắt đầu submit" })
-    start_time?: Date;
-
-    /**
-     * Thời gian kết thúc cho phép submit (nếu có)
-     */
-    @IsOptional()
-    @Prop()
-    @EntityDefinition.field({ label: "Thời gian kết thúc submit" })
-    end_time?: Date;
 }
 
 export type ContestProblemsDocument = HydratedDocument<ContestProblems>;
