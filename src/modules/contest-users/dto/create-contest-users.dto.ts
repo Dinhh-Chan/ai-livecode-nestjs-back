@@ -4,8 +4,10 @@ import {
     IsNumber,
     IsOptional,
     IsBoolean,
+    IsEnum,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
+import { ContestUserStatus } from "../entities/contest-users.entity";
 
 export class CreateContestUsersDto {
     @IsString()
@@ -32,4 +34,13 @@ export class CreateContestUsersDto {
     @IsOptional()
     @EntityDefinition.field({ label: "Thứ tự sắp xếp" })
     order_index?: number;
+
+    @IsEnum(ContestUserStatus)
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Trạng thái tham gia",
+        enum: Object.values(ContestUserStatus),
+        example: ContestUserStatus.PENDING,
+    })
+    status?: ContestUserStatus;
 }

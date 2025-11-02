@@ -3,8 +3,20 @@ import { EntityDefinition } from "@common/constant/class/entity-definition";
 import { BaseEntity } from "@common/interface/base-entity.interface";
 import { Entity } from "@module/repository";
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { IsString, IsOptional, IsNumber, IsBoolean } from "class-validator";
+import {
+    IsString,
+    IsOptional,
+    IsNumber,
+    IsBoolean,
+    IsEnum,
+} from "class-validator";
 import { HydratedDocument } from "mongoose";
+
+export enum ContestUserStatus {
+    PENDING = "pending",
+    ENROLLED = "enrolled",
+    REJECTED = "rejected",
+}
 
 @Schema({
     collection: Entity.CONTEST_USERS,
@@ -56,6 +68,18 @@ export class ContestUsers implements BaseEntity {
     @Prop({ default: 0 })
     @EntityDefinition.field({ label: "Thứ tự sắp xếp" })
     order_index: number;
+
+    /**
+     * Trạng thái tham gia contest
+     */
+    @IsEnum(ContestUserStatus)
+    @Prop({ default: ContestUserStatus.PENDING })
+    @EntityDefinition.field({
+        label: "Trạng thái tham gia",
+        enum: Object.values(ContestUserStatus),
+        example: ContestUserStatus.PENDING,
+    })
+    status: ContestUserStatus;
 }
 
 export type ContestUsersDocument = HydratedDocument<ContestUsers>;

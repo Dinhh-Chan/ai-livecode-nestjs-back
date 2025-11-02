@@ -1,17 +1,23 @@
 import { BaseService } from "@config/service/base.service";
-import { ContestUsers } from "../entities/contest-users.entity";
+import {
+    ContestUsers,
+    ContestUserStatus,
+} from "../entities/contest-users.entity";
 import { ContestUsersRepository } from "../repository/contest-users-repository.interface";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
 import { GetManyQuery, GetPageQuery } from "@common/constant";
+import { ApiError } from "@config/exception/api-error";
 
 @Injectable()
 export class ContestUsersService extends BaseService<
     ContestUsers,
     ContestUsersRepository
 > {
+    private readonly logger = new Logger(ContestUsersService.name);
+
     constructor(
         @InjectRepository(Entity.CONTEST_USERS)
         private readonly contestUsersRepository: ContestUsersRepository,
@@ -68,5 +74,148 @@ export class ContestUsersService extends BaseService<
             { contest_id: contestId, user_id: userId } as any,
             { is_manager: isManager } as any,
         );
+    }
+
+    /**
+     * User request tham gia contest
+     */
+    async requestJoin(user: User, contestId: string): Promise<ContestUsers> {
+        // Kiểm tra xem user đã có request chưa
+        const existing = await this.getOne(
+            user,
+            { contest_id: contestId, user_id: user._id } as any,
+            {},
+        );
+
+        if (existing) {
+            // Nếu đã có và đang PENDING, không cần tạo lại
+            if (existing.status === ContestUserStatus.PENDING) {
+                this.logger.log(
+                    `User ${user._id} already has pending request for contest ${contestId}`,
+                );
+                return existing;
+            }
+            // Nếu đã ENROLLED hoặc REJECTED, có thể cho phép request lại
+            if (existing.status === ContestUserStatus.ENROLLED) {
+                throw ApiError.BadRequest(
+                    "error-contest-user-already-enrolled",
+                    {
+                        message: "Bạn đã tham gia contest này",
+                    },
+                );
+            }
+        }
+
+        // Tạo request mới với status PENDING
+        return this.create(user, {
+            contest_id: contestId,
+            user_id: user._id,
+            status: ContestUserStatus.PENDING,
+            accepted_count: 0,
+            is_manager: false,
+            order_index: 0,
+        } as any);
+    }
+
+    /**
+     * Admin approve request của user
+     */
+    async approveRequest(
+        user: User,
+        contestId: string,
+        userId: string,
+    ): Promise<ContestUsers> {
+        const contestUser = await this.getOne(
+            user,
+            { contest_id: contestId, user_id: userId } as any,
+            {},
+        );
+
+        if (!contestUser) {
+            throw ApiError.NotFound("error-contest-user-not-found", {
+                message: "Không tìm thấy request tham gia contest",
+            });
+        }
+
+        if (contestUser.status === ContestUserStatus.ENROLLED) {
+            this.logger.log(
+                `User ${userId} already enrolled in contest ${contestId}`,
+            );
+            return contestUser;
+        }
+
+        return this.updateOne(
+            user,
+            { contest_id: contestId, user_id: userId } as any,
+            { status: ContestUserStatus.ENROLLED } as any,
+        );
+    }
+
+    /**
+     * Admin reject request của user
+     */
+    async rejectRequest(
+        user: User,
+        contestId: string,
+        userId: string,
+    ): Promise<ContestUsers> {
+        const contestUser = await this.getOne(
+            user,
+            { contest_id: contestId, user_id: userId } as any,
+            {},
+        );
+
+        if (!contestUser) {
+            throw ApiError.NotFound("error-contest-user-not-found", {
+                message: "Không tìm thấy request tham gia contest",
+            });
+        }
+
+        return this.updateOne(
+            user,
+            { contest_id: contestId, user_id: userId } as any,
+            { status: ContestUserStatus.REJECTED } as any,
+        );
+    }
+
+    /**
+     * Admin add user trực tiếp vào contest (status = ENROLLED)
+     */
+    async addUser(
+        user: User,
+        contestId: string,
+        userId: string,
+    ): Promise<ContestUsers> {
+        // Kiểm tra xem user đã có trong contest chưa
+        const existing = await this.getOne(
+            user,
+            { contest_id: contestId, user_id: userId } as any,
+            {},
+        );
+
+        if (existing) {
+            // Nếu đã có, update status thành ENROLLED
+            if (existing.status === ContestUserStatus.ENROLLED) {
+                this.logger.log(
+                    `User ${userId} already enrolled in contest ${contestId}`,
+                );
+                return existing;
+            }
+            return this.updateOne(
+                user,
+                { contest_id: contestId, user_id: userId } as any,
+                { status: ContestUserStatus.ENROLLED } as any,
+            );
+        }
+
+        // Tạo mới với status ENROLLED
+        return this.create(user, {
+            contest_id: contestId,
+            user_id: userId,
+            status: ContestUserStatus.ENROLLED,
+            accepted_count: 0,
+            is_manager: false,
+            order_index: 0,
+        } as any);
     }
 }

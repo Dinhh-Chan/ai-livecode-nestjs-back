@@ -1,7 +1,10 @@
 import { StrObjectId } from "@common/constant";
 import { Entity } from "@module/repository";
 import { Column, DataType, Model, Table } from "sequelize-typescript";
-import { ContestUsers } from "../entities/contest-users.entity";
+import {
+    ContestUsers,
+    ContestUserStatus,
+} from "../entities/contest-users.entity";
 
 @Table({
     tableName: Entity.CONTEST_USERS,
@@ -68,4 +71,12 @@ export class ContestUsersModel extends Model implements ContestUsers {
         field: "_order_index",
     })
     order_index: number;
+
+    @Column({
+        type: DataType.STRING(20),
+        allowNull: false,
+        defaultValue: ContestUserStatus.PENDING,
+        field: "_status",
+    })
+    status: ContestUserStatus;
 }

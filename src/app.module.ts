@@ -33,6 +33,7 @@ import { ContestsModule } from "./modules/contests/contests.module";
 import { ContestUsersModule } from "./modules/contest-users/contest-users.module";
 import { ContestProblemsModule } from "./modules/contest-problems/contest-problems.module";
 import { UserProblemProgressModule } from "./modules/user-problem-progress/user-problem-progress.module";
+import { ContestSubmissionsModule } from "./modules/contest-submissions/contest-submissions.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -68,6 +69,7 @@ import { UserProblemProgressModule } from "./modules/user-problem-progress/user-
         ContestUsersModule,
         ContestProblemsModule,
         UserProblemProgressModule,
+        ContestSubmissionsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
