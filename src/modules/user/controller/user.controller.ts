@@ -1,7 +1,7 @@
 import { RequestAuthData } from "@common/constant/class/request-auth-data";
 import { ApiRecordResponse } from "@common/decorator/api.decorator";
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
-import { Body, Controller, Get, Put, Req, Param } from "@nestjs/common";
+import { Body, Controller, Get, Put, Req, Param, Query } from "@nestjs/common";
 
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request } from "express";
@@ -11,6 +11,7 @@ import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { UserProfileDto } from "../dto/user-profile.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
+import { GetManyQuery } from "@common/constant";
 
 @Controller("user")
 @ApiTags("user")
@@ -110,6 +111,84 @@ export class UserController extends BaseControllerFactory<User>(
         const authData = req.user as RequestAuthData;
         const user = await authData.getUser();
         return this.userService.getUserProfile(user);
+    }
+
+    @Get("search-username")
+    @ApiRecordResponse(User)
+    @ApiOperation({
+        summary: "Tìm user theo username",
+        description:
+            "Search theo username. Mặc định dùng CONTAIN. Nếu exact=true thì dùng EQUAL.",
+    })
+    async searchByUsername(
+        @Req() req: Request,
+        @Query("q") q: string,
+        @Query("exact") exact?: string,
+        @Query("limit") limit?: string,
+        @Query("skip") skip?: string,
+        @Query("select") select?: string,
+        @Query("sort") sort?: string,
+    ) {
+        const authData = req.user as RequestAuthData;
+        const user = await authData.getUser();
+        if (!q || q.trim() === "") {
+            return [];
+        }
+        const isExact = exact === "true";
+        const conditions: any = isExact
+            ? { username: { $eq: q } }
+            : { username: { $like: `%${q}%` } };
+        const query: any = {} as GetManyQuery<User>;
+        if (limit) query.limit = Number(limit);
+        if (skip) query.skip = Number(skip);
+        if (select)
+            query.select = select
+                .split(",")
+                .reduce(
+                    (acc, f) => ((acc[f] = 1), acc),
+                    {} as Record<string, number>,
+                );
+        if (sort) query.sort = { [sort]: 1 } as any;
+        return this.userService.getMany(user, conditions, query);
+    }
+
+    @Get("search-username/page")
+    @ApiRecordResponse(User)
+    @ApiOperation({
+        summary: "Tìm user theo username (có phân trang)",
+        description:
+            "Search theo username, trả về dạng phân trang. Mặc định CONTAIN, exact=true để so khớp chính xác.",
+    })
+    async searchByUsernamePage(
+        @Req() req: Request,
+        @Query("q") q: string,
+        @Query("exact") exact?: string,
+        @Query("page") page?: string,
+        @Query("limit") limit?: string,
+        @Query("select") select?: string,
+        @Query("sort") sort?: string,
+    ) {
+        const authData = req.user as RequestAuthData;
+        const user = await authData.getUser();
+        if (!q || q.trim() === "") {
+            return { page: 1, limit: 0, total: 0, result: [] };
+        }
+        const isExact = exact === "true";
+        const conditions: any = isExact
+            ? { username: { $eq: q } }
+            : { username: { $like: `%${q}%` } };
+        const query: any = {} as GetManyQuery<User>;
+        if (page) query.page = Number(page);
+        if (limit) query.limit = Number(limit);
+        if (select)
+            query.select = select
+                .split(",")
+                .reduce(
+                    (acc, f) => ((acc[f] = 1), acc),
+                    {} as Record<string, number>,
+                );
+        if (sort) query.sort = { [sort]: 1 } as any;
+        return this.userService.getPage(user, conditions, query as any);
     }
 
     // @Get("test")
