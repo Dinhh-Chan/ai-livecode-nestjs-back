@@ -23,6 +23,10 @@ import {
 import { ContestProblemsService } from "@module/contest-problems/services/contest-problems.services";
 import { ProblemsService } from "@module/problems/services/problems.services";
 import { UserService } from "@module/user/service/user.service";
+import { ContestSubmissionsService } from "@module/contest-submissions/services/contest-submissions.services";
+import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
+import type { ContestRankingDto } from "../dto/contest-ranking.dto";
+import type { ContestRankingItemDto } from "../dto/contest-ranking-item.dto";
 
 @Injectable()
 export class ContestsService extends BaseService<Contests, ContestsRepository> {
@@ -39,6 +43,8 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
         private readonly problemsService: ProblemsService,
         @Inject(forwardRef(() => UserService))
         private readonly userService: UserService,
+        @Inject(forwardRef(() => ContestSubmissionsService))
+        private readonly contestSubmissionsService: ContestSubmissionsService,
     ) {
         super(contestsRepository);
     }
@@ -617,5 +623,205 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             ...result,
             result: mappedItems,
         };
+    }
+
+    /**
+     * Lấy ranking của contest (giống bảng xếp hạng VNOI)
+     * Trả về: rank, user info, accepted_count, và danh sách problems với trạng thái solved
+     */
+    async getContestRanking(
+        user: User,
+        contestId: string,
+    ): Promise<ContestRankingDto> {
+        // 1. Lấy tất cả users đã ENROLLED trong contest
+        const contestUsers = await this.contestUsersService.getMany(
+            user,
+            {
+                contest_id: contestId,
+                status: ContestUserStatus.ENROLLED,
+            } as any,
+            {
+                sort: { accepted_count: -1, order_index: 1 },
+            },
+        );
+
+        if (contestUsers.length === 0) {
+            return { ranking: [] };
+        }
+
+        // 2. Lấy thông tin đầy đủ của users
+        const userIds = contestUsers.map((cu: any) => cu.user_id);
+        const users = await this.userService.getMany(
+            user,
+            {
+                _id: { $in: userIds },
+            } as any,
+            {},
+        );
+
+        const userMap = new Map(users.map((u: any) => [u._id, u]));
+
+        // 3. Lấy tất cả problems trong contest
+        const contestProblems = await this.contestProblemsService.getMany(
+            user,
+            {
+                contest_id: contestId,
+                is_visible: true,
+            } as any,
+            {
+                sort: { order_index: 1 },
+            },
+        );
+
+        if (contestProblems.length === 0) {
+            return { ranking: [] };
+        }
+
+        const problemIds = contestProblems.map((cp: any) => cp.problem_id);
+        const problems = await this.problemsService.getMany(
+            user,
+            {
+                _id: { $in: problemIds },
+            } as any,
+            {},
+        );
+
+        const problemMap = new Map(problems.map((p: any) => [p._id, p]));
+
+        // 4. Lấy tất cả submissions AC của tất cả users trong contest
+        const allACSubmissions = await this.contestSubmissionsService.getMany(
+            user,
+            {
+                contest_id: contestId,
+                status: SubmissionStatus.ACCEPTED,
+            } as any,
+            {},
+        );
+
+        // Tạo map: user_id -> problem_id -> submission (AC đầu tiên)
+        const userProblemSubmissionMap = new Map<string, Map<string, any>>();
+
+        allACSubmissions.forEach((submission: any) => {
+            const userId = submission.student_id;
+            const problemId = submission.problem_id;
+
+            if (!userProblemSubmissionMap.has(userId)) {
+                userProblemSubmissionMap.set(userId, new Map());
+            }
+
+            const userSubmissions = userProblemSubmissionMap.get(userId);
+            // Chỉ lưu submission AC đầu tiên cho mỗi problem
+            if (!userSubmissions.has(problemId)) {
+                userSubmissions.set(problemId, submission);
+            } else {
+                // Nếu đã có, kiểm tra xem submission này có sớm hơn không
+                const existing = userSubmissions.get(problemId);
+                if (
+                    submission.solved_at &&
+                    existing.solved_at &&
+                    new Date(submission.solved_at) <
+                        new Date(existing.solved_at)
+                ) {
+                    userSubmissions.set(problemId, submission);
+                }
+            }
+        });
+
+        // 5. Tạo ranking với score
+        const rankingWithScore: Array<{
+            contestUser: any;
+            userData: any;
+            userSubmissions: Map<string, any>;
+            totalScore: number;
+        }> = [];
+
+        contestUsers.forEach((cu: any) => {
+            const userData = userMap.get(cu.user_id);
+            const userSubmissions =
+                userProblemSubmissionMap.get(cu.user_id) || new Map();
+            let totalScore = 0;
+
+            // Tính tổng điểm
+            contestProblems.forEach((cp: any) => {
+                const submission = userSubmissions.get(cp.problem_id);
+                if (submission) {
+                    totalScore += cp.score || 100;
+                }
+            });
+
+            rankingWithScore.push({
+                contestUser: cu,
+                userData,
+                userSubmissions,
+                totalScore,
+            });
+        });
+
+        // Sắp xếp theo total_score (giảm dần), sau đó theo accepted_count, cuối cùng theo order_index
+        rankingWithScore.sort((a, b) => {
+            if (b.totalScore !== a.totalScore) {
+                return b.totalScore - a.totalScore;
+            }
+            if (b.contestUser.accepted_count !== a.contestUser.accepted_count) {
+                return (
+                    b.contestUser.accepted_count - a.contestUser.accepted_count
+                );
+            }
+            return a.contestUser.order_index - b.contestUser.order_index;
+        });
+
+        // 6. Tạo ranking response
+        const ranking: ContestRankingItemDto[] = rankingWithScore.map(
+            (
+                { contestUser: cu, userData, userSubmissions, totalScore },
+                index: number,
+            ) => {
+                // Loại bỏ các trường nhạy cảm
+                let sanitizedUser = null;
+                if (userData) {
+                    const { password, ssoId, email, ...rest } = userData;
+                    sanitizedUser = {
+                        _id: rest._id,
+                        username: rest.username,
+                        fullname: rest.fullname,
+                    };
+                }
+
+                // Tạo danh sách problems với trạng thái solved và score
+                const problemsWithStatus = contestProblems.map((cp: any) => {
+                    const problem = problemMap.get(cp.problem_id);
+                    const submission = userSubmissions.get(cp.problem_id);
+                    const isSolved = !!submission;
+                    const problemScore = cp.score || 100;
+
+                    return {
+                        problem_id: cp.problem_id,
+                        problem_name: problem?.name || "Unknown",
+                        is_solved: isSolved,
+                        score: problemScore,
+                        solved_at: submission?.solved_at || undefined,
+                    };
+                });
+
+                // Tính lại accepted_count từ submissions thực tế (để đảm bảo chính xác)
+                const actualAcceptedCount = Array.from(
+                    userSubmissions.keys(),
+                ).length;
+
+                return {
+                    rank: index + 1,
+                    user: sanitizedUser || {
+                        _id: cu.user_id,
+                        username: "Unknown",
+                        fullname: undefined,
+                    },
+                    accepted_count: actualAcceptedCount,
+                    total_score: totalScore,
+                    problems: problemsWithStatus,
+                };
+            },
+        );
+
+        return { ranking };
     }
 }

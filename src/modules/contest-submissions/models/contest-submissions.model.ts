@@ -24,10 +24,6 @@ import { SubmissionStatus } from "@module/student-submissions/entities/student-s
             fields: ["_submission_id"],
             name: "contest_submissions_submission_id_idx",
         },
-        {
-            fields: ["_contest_id", "_student_id", "_problem_id"],
-            name: "contest_submissions_contest_student_problem_idx",
-        },
     ],
 })
 export class ContestSubmissionsModel

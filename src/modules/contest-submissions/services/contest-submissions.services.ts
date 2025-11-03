@@ -116,28 +116,8 @@ export class ContestSubmissionsService extends BaseService<
             `Submission result: ${studentSubmission.status}, score: ${studentSubmission.score}`,
         );
 
-        // Lưu tất cả submissions vào ContestSubmissions (cả AC và không AC)
-        const contestSubmission = await this.create(user, {
-            contest_id: dto.contest_id,
-            submission_id: studentSubmission.submission_id,
-            student_id: user._id,
-            problem_id: dto.problem_id,
-            code: dto.code,
-            language_id: dto.language_id,
-            status: studentSubmission.status,
-            score: studentSubmission.score || 0,
-            execution_time_ms: studentSubmission.execution_time_ms || 0,
-            memory_used_mb: studentSubmission.memory_used_mb || 0,
-            test_cases_passed: studentSubmission.test_cases_passed || 0,
-            total_test_cases: studentSubmission.total_test_cases || 0,
-            submitted_at: studentSubmission.submitted_at || new Date(),
-            solved_at:
-                studentSubmission.status === SubmissionStatus.ACCEPTED
-                    ? new Date()
-                    : undefined,
-        } as any);
-
-        // Nếu AC và là lần đầu AC problem này trong contest, tăng accepted_count
+        // Nếu AC, kiểm tra TRƯỚC KHI lưu xem đã có AC chưa
+        let isFirstAC = false;
         if (studentSubmission.status === SubmissionStatus.ACCEPTED) {
             // Kiểm tra xem đã có submission AC cho problem này trong contest chưa
             const existingACSubmissions = await this.getMany(
@@ -151,20 +131,64 @@ export class ContestSubmissionsService extends BaseService<
                 {},
             );
 
-            // Nếu chỉ có 1 submission AC (submission vừa tạo), nghĩa là lần đầu AC
-            if (existingACSubmissions.length === 1) {
-                // Tăng accepted_count trong ContestUsers
-                await this.contestUsersService.incrementAcceptedCount(
-                    user,
-                    dto.contest_id,
-                    user._id,
-                    1,
-                );
-
-                this.logger.log(
-                    `First AC for user ${user._id}, problem ${dto.problem_id} in contest ${dto.contest_id}. Incremented accepted_count.`,
-                );
+            // Nếu chưa có AC nào, đây là lần đầu AC
+            if (existingACSubmissions.length === 0) {
+                isFirstAC = true;
             }
+        }
+
+        // Lưu tất cả submissions vào ContestSubmissions (cả AC và không AC)
+        let contestSubmission: ContestSubmissions;
+        try {
+            contestSubmission = await this.create(user, {
+                contest_id: dto.contest_id,
+                submission_id: studentSubmission.submission_id,
+                student_id: user._id,
+                problem_id: dto.problem_id,
+                code: dto.code,
+                language_id: dto.language_id,
+                status: studentSubmission.status,
+                score: studentSubmission.score || 0,
+                execution_time_ms: studentSubmission.execution_time_ms || 0,
+                memory_used_mb: studentSubmission.memory_used_mb || 0,
+                test_cases_passed: studentSubmission.test_cases_passed || 0,
+                total_test_cases: studentSubmission.total_test_cases || 0,
+                submitted_at: studentSubmission.submitted_at || new Date(),
+                solved_at:
+                    studentSubmission.status === SubmissionStatus.ACCEPTED
+                        ? new Date()
+                        : undefined,
+            } as any);
+        } catch (error: any) {
+            // Xử lý lỗi unique constraint - có thể do constraint chưa được xóa khỏi database
+            if (
+                error?.name === "SequelizeUniqueConstraintError" ||
+                error?.original?.code === "23505"
+            ) {
+                this.logger.error(
+                    `Unique constraint violation. Constraint 'contest_submissions_contest_student_problem_unique_idx' still exists in database. Please run migration to drop it.`,
+                );
+                throw ApiError.Conflict("error-unique-constraint", {
+                    message:
+                        "Không thể lưu submission. Unique constraint vẫn còn trong database. Vui lòng chạy migration để xóa constraint.",
+                    detail: "Constraint 'contest_submissions_contest_student_problem_unique_idx' cần được xóa để cho phép nhiều submissions cho cùng một problem.",
+                });
+            }
+            throw error;
+        }
+
+        // Nếu là lần đầu AC, tăng accepted_count
+        if (isFirstAC) {
+            await this.contestUsersService.incrementAcceptedCount(
+                user,
+                dto.contest_id,
+                user._id,
+                1,
+            );
+
+            this.logger.log(
+                `First AC for user ${user._id}, problem ${dto.problem_id} in contest ${dto.contest_id}. Incremented accepted_count.`,
+            );
         }
 
         this.logger.log(

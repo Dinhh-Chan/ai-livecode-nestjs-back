@@ -10,6 +10,7 @@ import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
 import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { ApiError } from "@config/exception/api-error";
+import { literal } from "sequelize";
 
 @Injectable()
 export class ContestUsersService extends BaseService<
@@ -56,10 +57,13 @@ export class ContestUsersService extends BaseService<
         userId: string,
         incrementBy: number = 1,
     ) {
+        // Sử dụng literal để increment với tên column đúng trong database
         return this.updateOne(
             user,
             { contest_id: contestId, user_id: userId } as any,
-            { $inc: { accepted_count: incrementBy } } as any,
+            {
+                accepted_count: literal(`"_accepted_count" + ${incrementBy}`),
+            } as any,
         );
     }
 

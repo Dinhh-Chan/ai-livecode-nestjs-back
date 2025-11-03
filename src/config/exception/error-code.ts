@@ -39,4 +39,5 @@ export type ErrorCode =
     | "error-contest-user-already-completed"
     | "error-contest-user-already-failed"
     | "error-contest-user-already-timed-out"
+    | "error-unique-constraint"
     | FileErrorCode;

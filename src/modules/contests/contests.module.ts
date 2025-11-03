@@ -10,6 +10,7 @@ import { ContestUsersModule } from "@module/contest-users/contest-users.module";
 import { ContestProblemsModule } from "@module/contest-problems/contest-problems.module";
 import { ProblemsModule } from "@module/problems/problems.module";
 import { UserModule } from "@module/user/user.module";
+import { ContestSubmissionsModule } from "@module/contest-submissions/contest-submissions.module";
 
 @Module({
     imports: [
@@ -18,6 +19,7 @@ import { UserModule } from "@module/user/user.module";
         forwardRef(() => ContestProblemsModule),
         forwardRef(() => ProblemsModule),
         forwardRef(() => UserModule),
+        forwardRef(() => ContestSubmissionsModule),
     ],
     controllers: [ContestsController],
     providers: [
