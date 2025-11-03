@@ -23,10 +23,7 @@ export class CreateClassDto {
     @EntityDefinition.field({ label: "Mã lớp học", required: true })
     class_code: string;
 
-    @IsString()
-    @IsNotEmpty({ message: "ID khóa học không được để trống" })
-    @EntityDefinition.field({ label: "ID khóa học", required: true })
-    course_id: string;
+    // Bỏ trường khóa học
 
     @IsString()
     @IsNotEmpty({ message: "ID giáo viên không được để trống" })

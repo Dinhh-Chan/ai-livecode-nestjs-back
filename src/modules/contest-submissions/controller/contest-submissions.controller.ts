@@ -70,16 +70,32 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     @Get("contest/:contestId")
     @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
     @ApiOperation({
-        summary: "Lấy danh sách submissions của user trong contest",
+        summary: "Lấy danh sách submissions trong contest",
         description:
-            "API để lấy danh sách các bài đã AC của user trong contest",
+            "API để lấy danh sách submissions trong contest kèm thông tin user và problem",
     })
-    @ApiListResponse(ContestSubmissions)
     async getContestSubmissions(
         @ReqUser() user: User,
         @Param("contestId") contestId: string,
     ) {
-        return this.contestSubmissionsService.getContestSubmissions(
+        return this.contestSubmissionsService.getContestAllSubmissions(
+            user,
+            contestId,
+        );
+    }
+
+    @Get("contest/:contestId/all")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Lấy tất cả submissions của tất cả users trong contest",
+        description:
+            "Trả về toàn bộ submissions trong contest kèm thông tin cơ bản của user (username, fullname, studentPtitCode) và thông tin bài tập (name, description)",
+    })
+    async getContestAllSubmissions(
+        @ReqUser() user: User,
+        @Param("contestId") contestId: string,
+    ) {
+        return this.contestSubmissionsService.getContestAllSubmissions(
             user,
             contestId,
         );

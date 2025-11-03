@@ -1,10 +1,12 @@
 import { BaseService } from "@config/service/base.service";
 import { ClassStudents } from "../entities/class-students.entity";
 import { ClassStudentsRepository } from "../repository/class-students-repository.interface";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject, forwardRef } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
 import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
+import { UserService } from "@module/user/service/user.service";
+import { GetManyQuery } from "@common/constant";
 
 @Injectable()
 export class ClassStudentsService extends BaseService<
@@ -14,6 +16,8 @@ export class ClassStudentsService extends BaseService<
     constructor(
         @InjectRepository(Entity.CLASS_STUDENTS)
         private readonly classStudentsRepository: ClassStudentsRepository,
+        @Inject(forwardRef(() => UserService))
+        private readonly userService: UserService,
     ) {
         super(classStudentsRepository);
     }
@@ -84,5 +88,44 @@ export class ClassStudentsService extends BaseService<
         }
 
         return { success: successCount, failed: failedCount, results };
+    }
+
+    async getByClassWithUsers(
+        user: User,
+        classId: string,
+        query?: GetManyQuery<ClassStudents>,
+    ): Promise<any[]> {
+        const list = await this.getMany(
+            user,
+            { class_id: classId } as any,
+            query || { sort: { enrolled_at: -1 } },
+        );
+        if ((list as any[]).length === 0) return list as any[];
+        const studentIds = Array.from(
+            new Set((list as any[]).map((i) => i.student_id).filter(Boolean)),
+        );
+        let userMap = new Map<string, any>();
+        if (studentIds.length > 0) {
+            const users = await this.userService.getMany(
+                user,
+                { _id: { $in: studentIds } } as any,
+                {},
+            );
+            userMap = new Map(
+                users.map((u: any) => [
+                    u._id,
+                    {
+                        _id: u._id,
+                        username: u.username,
+                        fullname: u.fullname,
+                        studentPtitCode: u.studentPtitCode,
+                    },
+                ]),
+            );
+        }
+        return (list as any[]).map((i) => ({
+            ...i,
+            student_basic: userMap.get(i.student_id) || null,
+        }));
     }
 }

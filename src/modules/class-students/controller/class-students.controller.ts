@@ -88,9 +88,9 @@ export class ClassStudentsController extends BaseControllerFactory<ClassStudents
         @Param("classId") classId: string,
         @RequestQuery() query: GetManyQuery<ClassStudents>,
     ) {
-        return this.classStudentsService.getMany(
+        return this.classStudentsService.getByClassWithUsers(
             user,
-            { class_id: classId },
+            classId,
             query,
         );
     }

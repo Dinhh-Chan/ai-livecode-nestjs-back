@@ -41,13 +41,7 @@ export class Class implements BaseEntity {
     @EntityDefinition.field({ label: "Mã lớp học", required: true })
     class_code: string;
 
-    /**
-     * ID khóa học
-     */
-    @IsString()
-    @Prop({ required: true, maxlength: 50 })
-    @EntityDefinition.field({ label: "ID khóa học", required: true })
-    course_id: string;
+    // Bỏ trường khóa học
 
     /**
      * ID giáo viên
@@ -91,12 +85,7 @@ export class Class implements BaseEntity {
     is_active: boolean;
 
     // Virtual fields for relationships
-    @EntityDefinition.field({
-        label: "Khóa học",
-        disableImport: true,
-        propertyTarget: "Courses",
-    })
-    course?: any;
+    // Bỏ virtual course
 
     @EntityDefinition.field({
         label: "Giáo viên",
@@ -117,12 +106,7 @@ export type ClassDocument = HydratedDocument<Class>;
 export const ClassSchema = SchemaFactory.createForClass(Class);
 
 // Virtual relationships
-ClassSchema.virtual("course", {
-    ref: Entity.COURSES,
-    localField: "course_id",
-    foreignField: "course_id",
-    justOne: true,
-});
+// Remove virtual course
 
 ClassSchema.virtual("teacher", {
     ref: Entity.USER,

@@ -12,6 +12,8 @@ import { ApiError } from "@config/exception/api-error";
 import { ContestUsersService } from "@module/contest-users/services/contest-users.services";
 import { ContestsService } from "@module/contests/services/contests.services";
 import { GetManyQuery } from "@common/constant";
+import { UserService } from "@module/user/service/user.service";
+import { ProblemsService } from "@module/problems/services/problems.services";
 import { ContestUserStatus } from "@module/contest-users/entities/contest-users.entity";
 
 @Injectable()
@@ -30,6 +32,10 @@ export class ContestSubmissionsService extends BaseService<
         private readonly contestUsersService: ContestUsersService,
         @Inject(forwardRef(() => ContestsService))
         private readonly contestsService: ContestsService,
+        @Inject(forwardRef(() => UserService))
+        private readonly userService: UserService,
+        @Inject(forwardRef(() => ProblemsService))
+        private readonly problemsService: ProblemsService,
     ) {
         super(contestSubmissionsRepository);
     }
@@ -206,7 +212,7 @@ export class ContestSubmissionsService extends BaseService<
         contestId: string,
         query?: GetManyQuery<ContestSubmissions>,
     ): Promise<ContestSubmissions[]> {
-        return this.getMany(
+        const submissions = await this.getMany(
             user,
             {
                 contest_id: contestId,
@@ -214,6 +220,110 @@ export class ContestSubmissionsService extends BaseService<
             } as any,
             query || { sort: { solved_at: -1 } },
         );
+
+        // Gắn thông tin user vào từng submission
+        const me = await this.userService.getById(user, user._id, {});
+        const userInfo = me
+            ? {
+                  _id: me._id,
+                  username: me.username,
+                  fullname: me.fullname,
+                  studentPtitCode: me.studentPtitCode,
+              }
+            : null;
+
+        // Gắn thông tin problem (name, description) vào từng submission
+        const problemIds = Array.from(
+            new Set(submissions.map((s: any) => s.problem_id)),
+        );
+        let problemMap = new Map<string, any>();
+        if (problemIds.length > 0) {
+            const problems = await this.problemsService.getMany(
+                user,
+                { _id: { $in: problemIds } } as any,
+                {},
+            );
+            problemMap = new Map(problems.map((p: any) => [p._id, p]));
+        }
+
+        return submissions.map((s: any) => {
+            const p = problemMap.get(s.problem_id);
+            const problemInfo = p
+                ? {
+                      _id: p._id,
+                      name: p.name,
+                      description: p.description,
+                  }
+                : null;
+            return { ...s, user: userInfo, problem: problemInfo };
+        });
+    }
+
+    /**
+     * Lấy tất cả submissions trong contest (tất cả users) kèm user và problem info
+     */
+    async getContestAllSubmissions(
+        user: User,
+        contestId: string,
+        query?: GetManyQuery<ContestSubmissions>,
+    ): Promise<any[]> {
+        const submissions = await this.getMany(
+            user,
+            {
+                contest_id: contestId,
+            } as any,
+            query || { sort: { solved_at: -1 } },
+        );
+
+        if (submissions.length === 0) return [];
+
+        // Build users map
+        const studentIds = Array.from(
+            new Set(submissions.map((s: any) => s.student_id)),
+        );
+        const users = await this.userService.getMany(
+            user,
+            { _id: { $in: studentIds } } as any,
+            {},
+        );
+        const userMap = new Map(
+            users.map((u: any) => [
+                u._id,
+                {
+                    _id: u._id,
+                    username: u.username,
+                    fullname: u.fullname,
+                    studentPtitCode: u.studentPtitCode,
+                },
+            ]),
+        );
+
+        // Build problems map
+        const problemIds = Array.from(
+            new Set(submissions.map((s: any) => s.problem_id)),
+        );
+        const problems = await this.problemsService.getMany(
+            user,
+            { _id: { $in: problemIds } } as any,
+            {},
+        );
+        const problemMap = new Map(
+            problems.map((p: any) => [
+                p._id,
+                {
+                    _id: p._id,
+                    name: p.name,
+                    description: p.description,
+                },
+            ]),
+        );
+
+        // Map
+        return submissions.map((s: any) => ({
+            ...s,
+            user: userMap.get(s.student_id) || null,
+            problem: problemMap.get(s.problem_id) || null,
+        }));
     }
 
     /**

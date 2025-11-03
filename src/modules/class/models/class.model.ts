@@ -38,12 +38,7 @@ export class ClassModel extends Model implements Class {
     })
     class_code: string;
 
-    @Column({
-        type: DataType.STRING(50),
-        allowNull: false,
-        field: "course_id",
-    })
-    course_id: string;
+    // Bỏ trường khóa học
 
     @Column({
         type: DataType.STRING(50),

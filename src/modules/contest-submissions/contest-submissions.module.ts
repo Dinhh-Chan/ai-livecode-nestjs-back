@@ -9,6 +9,8 @@ import { ContestSubmissionsSqlRepository } from "./repository/contest-submission
 import { StudentSubmissionsModule } from "@module/student-submissions/student-submissions.module";
 import { ContestUsersModule } from "@module/contest-users/contest-users.module";
 import { ContestsModule } from "@module/contests/contests.module";
+import { UserModule } from "@module/user/user.module";
+import { ProblemsModule } from "@module/problems/problems.module";
 
 @Module({
     imports: [
@@ -16,6 +18,8 @@ import { ContestsModule } from "@module/contests/contests.module";
         forwardRef(() => StudentSubmissionsModule),
         forwardRef(() => ContestUsersModule),
         forwardRef(() => ContestsModule),
+        forwardRef(() => UserModule),
+        forwardRef(() => ProblemsModule),
     ],
     controllers: [ContestSubmissionsController],
     providers: [
