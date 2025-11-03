@@ -26,8 +26,7 @@ import { SubmissionStatus } from "@module/student-submissions/entities/student-s
         },
         {
             fields: ["_contest_id", "_student_id", "_problem_id"],
-            unique: true,
-            name: "contest_submissions_contest_student_problem_unique_idx",
+            name: "contest_submissions_contest_student_problem_idx",
         },
     ],
 })
@@ -89,7 +88,6 @@ export class ContestSubmissionsModel
     @Column({
         type: DataType.STRING(50),
         allowNull: false,
-        defaultValue: SubmissionStatus.ACCEPTED,
         field: "_status",
     })
     status: SubmissionStatus;

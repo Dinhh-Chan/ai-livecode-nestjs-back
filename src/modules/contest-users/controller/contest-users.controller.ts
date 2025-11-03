@@ -4,6 +4,7 @@ import { ContestUsers } from "../entities/contest-users.entity";
 import { CreateContestUsersDto } from "../dto/create-contest-users.dto";
 import { UpdateContestUsersDto } from "../dto/update-contest-users.dto";
 import { RequestJoinContestDto } from "../dto/request-join-contest.dto";
+import { AddMultipleUsersDto } from "../dto/add-multiple-users.dto";
 import { Body, Controller, Param, Post, Put } from "@nestjs/common";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { ApiRecordResponse } from "@common/decorator/api.decorator";
@@ -129,5 +130,24 @@ export class ContestUsersController extends BaseControllerFactory<ContestUsers>(
         @Param("userId") userId: string,
     ) {
         return this.contestUsersService.addUser(user, contestId, userId);
+    }
+
+    @Post(":contestId/users/add-multiple")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Admin add nhiều users cùng lúc vào contest",
+        description:
+            "API để admin thêm nhiều users cùng lúc vào contest (status = ENROLLED). Trả về kết quả chi tiết cho từng user.",
+    })
+    async addMultipleUsers(
+        @ReqUser() user: User,
+        @Param("contestId") contestId: string,
+        @Body() dto: AddMultipleUsersDto,
+    ) {
+        return this.contestUsersService.addMultipleUsers(
+            user,
+            contestId,
+            dto.user_ids,
+        );
     }
 }

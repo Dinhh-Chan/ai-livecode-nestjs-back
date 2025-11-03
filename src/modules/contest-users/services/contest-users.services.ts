@@ -258,4 +258,90 @@ export class ContestUsersService extends BaseService<
             { start_at: now } as any,
         );
     }
+
+    /**
+     * Admin add nhiều users cùng lúc vào contest (status = ENROLLED)
+     */
+    async addMultipleUsers(
+        user: User,
+        contestId: string,
+        userIds: string[],
+    ): Promise<{
+        success: number;
+        failed: number;
+        results: Array<{
+            user_id: string;
+            success: boolean;
+            message?: string;
+        }>;
+    }> {
+        const results: Array<{
+            user_id: string;
+            success: boolean;
+            message?: string;
+        }> = [];
+
+        let successCount = 0;
+        let failedCount = 0;
+
+        for (const userId of userIds) {
+            try {
+                // Kiểm tra xem user đã có trong contest chưa
+                const existing = await this.getOne(
+                    user,
+                    { contest_id: contestId, user_id: userId } as any,
+                    {},
+                );
+
+                if (existing) {
+                    // Nếu đã có, update status thành ENROLLED nếu chưa phải ENROLLED
+                    if (existing.status !== ContestUserStatus.ENROLLED) {
+                        await this.updateOne(
+                            user,
+                            { contest_id: contestId, user_id: userId } as any,
+                            { status: ContestUserStatus.ENROLLED } as any,
+                        );
+                    }
+                    results.push({
+                        user_id: userId,
+                        success: true,
+                        message: "User đã được cập nhật thành ENROLLED",
+                    });
+                    successCount++;
+                } else {
+                    // Tạo mới với status ENROLLED
+                    await this.create(user, {
+                        contest_id: contestId,
+                        user_id: userId,
+                        status: ContestUserStatus.ENROLLED,
+                        accepted_count: 0,
+                        is_manager: false,
+                        order_index: 0,
+                    } as any);
+                    results.push({
+                        user_id: userId,
+                        success: true,
+                        message: "User đã được thêm vào contest",
+                    });
+                    successCount++;
+                }
+            } catch (error: any) {
+                this.logger.error(
+                    `Error adding user ${userId} to contest ${contestId}: ${error.message}`,
+                );
+                results.push({
+                    user_id: userId,
+                    success: false,
+                    message: error.message || "Lỗi không xác định",
+                });
+                failedCount++;
+            }
+        }
+
+        return {
+            success: successCount,
+            failed: failedCount,
+            results,
+        };
+    }
 }

@@ -76,10 +76,10 @@ export class ContestSubmissions implements BaseEntity {
     language_id: number;
 
     /**
-     * Trạng thái chấm bài (luôn là ACCEPTED)
+     * Trạng thái chấm bài
      */
     @IsEnum(SubmissionStatus)
-    @Prop({ default: SubmissionStatus.ACCEPTED })
+    @Prop({ required: true })
     @EntityDefinition.field({
         label: "Submission Status",
         enum: Object.values(SubmissionStatus),
