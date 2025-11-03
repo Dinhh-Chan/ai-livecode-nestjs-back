@@ -280,10 +280,45 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contestUsers.map((cu: any) => cu.contest_id),
         );
 
-        // Map lại để thêm is_enrolled
+        // Đếm số user ENROLLED và số problems hiển thị theo từng contest
+        const allUsersInContests = await this.contestUsersService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                status: ContestUserStatus.ENROLLED,
+            } as any,
+            {},
+        );
+        const usersCountMap = new Map<string, number>();
+        allUsersInContests.forEach((cu: any) => {
+            usersCountMap.set(
+                cu.contest_id,
+                (usersCountMap.get(cu.contest_id) || 0) + 1,
+            );
+        });
+
+        const allProblemsInContests = await this.contestProblemsService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                is_visible: true,
+            } as any,
+            {},
+        );
+        const problemsCountMap = new Map<string, number>();
+        allProblemsInContests.forEach((cp: any) => {
+            problemsCountMap.set(
+                cp.contest_id,
+                (problemsCountMap.get(cp.contest_id) || 0) + 1,
+            );
+        });
+
+        // Map lại để thêm is_enrolled và counts
         return contests.map((contest: any) => ({
             ...contest,
             is_enrolled: enrolledContestIds.has(contest._id),
+            users_count: usersCountMap.get(contest._id) || 0,
+            problems_count: problemsCountMap.get(contest._id) || 0,
         }));
     }
 
@@ -335,10 +370,45 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contestUsers.map((cu: any) => cu.contest_id),
         );
 
-        // Map lại để thêm is_enrolled
+        // Đếm số user ENROLLED và số problems hiển thị theo từng contest
+        const allUsersInContests = await this.contestUsersService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                status: ContestUserStatus.ENROLLED,
+            } as any,
+            {},
+        );
+        const usersCountMap = new Map<string, number>();
+        allUsersInContests.forEach((cu: any) => {
+            usersCountMap.set(
+                cu.contest_id,
+                (usersCountMap.get(cu.contest_id) || 0) + 1,
+            );
+        });
+
+        const allProblemsInContests = await this.contestProblemsService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                is_visible: true,
+            } as any,
+            {},
+        );
+        const problemsCountMap = new Map<string, number>();
+        allProblemsInContests.forEach((cp: any) => {
+            problemsCountMap.set(
+                cp.contest_id,
+                (problemsCountMap.get(cp.contest_id) || 0) + 1,
+            );
+        });
+
+        // Map lại để thêm is_enrolled và counts
         const mappedItems = result.result.map((contest: any) => ({
             ...contest,
             is_enrolled: enrolledContestIds.has(contest._id),
+            users_count: usersCountMap.get(contest._id) || 0,
+            problems_count: problemsCountMap.get(contest._id) || 0,
         }));
 
         return {
@@ -395,10 +465,45 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contestUsers.map((cu: any) => cu.contest_id),
         );
 
-        // Map lại để thêm is_enrolled
+        // Đếm số user ENROLLED và số problems hiển thị theo từng contest
+        const allUsersInContests = await this.contestUsersService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                status: ContestUserStatus.ENROLLED,
+            } as any,
+            {},
+        );
+        const usersCountMap = new Map<string, number>();
+        allUsersInContests.forEach((cu: any) => {
+            usersCountMap.set(
+                cu.contest_id,
+                (usersCountMap.get(cu.contest_id) || 0) + 1,
+            );
+        });
+
+        const allProblemsInContests = await this.contestProblemsService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                is_visible: true,
+            } as any,
+            {},
+        );
+        const problemsCountMap = new Map<string, number>();
+        allProblemsInContests.forEach((cp: any) => {
+            problemsCountMap.set(
+                cp.contest_id,
+                (problemsCountMap.get(cp.contest_id) || 0) + 1,
+            );
+        });
+
+        // Map lại để thêm is_enrolled và counts
         return contests.map((contest: any) => ({
             ...contest,
             is_enrolled: enrolledContestIds.has(contest._id),
+            users_count: usersCountMap.get(contest._id) || 0,
+            problems_count: problemsCountMap.get(contest._id) || 0,
         }));
     }
 
@@ -449,10 +554,45 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contestUsers.map((cu: any) => cu.contest_id),
         );
 
-        // Map lại để thêm is_enrolled
+        // Đếm số user ENROLLED và số problems hiển thị theo từng contest
+        const allUsersInContests = await this.contestUsersService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                status: ContestUserStatus.ENROLLED,
+            } as any,
+            {},
+        );
+        const usersCountMap = new Map<string, number>();
+        allUsersInContests.forEach((cu: any) => {
+            usersCountMap.set(
+                cu.contest_id,
+                (usersCountMap.get(cu.contest_id) || 0) + 1,
+            );
+        });
+
+        const allProblemsInContests = await this.contestProblemsService.getMany(
+            user,
+            {
+                contest_id: { $in: contestIds },
+                is_visible: true,
+            } as any,
+            {},
+        );
+        const problemsCountMap = new Map<string, number>();
+        allProblemsInContests.forEach((cp: any) => {
+            problemsCountMap.set(
+                cp.contest_id,
+                (problemsCountMap.get(cp.contest_id) || 0) + 1,
+            );
+        });
+
+        // Map lại để thêm is_enrolled và counts
         const mappedItems = result.result.map((contest: any) => ({
             ...contest,
             is_enrolled: enrolledContestIds.has(contest._id),
+            users_count: usersCountMap.get(contest._id) || 0,
+            problems_count: problemsCountMap.get(contest._id) || 0,
         }));
 
         return {

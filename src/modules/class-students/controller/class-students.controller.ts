@@ -3,7 +3,7 @@ import { ClassStudentsService } from "../services/class-students.services";
 import { ClassStudents } from "../entities/class-students.entity";
 import { CreateClassStudentsDto } from "../dto/create-class-students.dto";
 import { UpdateClassStudentsDto } from "../dto/update-class-students.dto";
-import { Controller, Get, Param, Query } from "@nestjs/common";
+import { Controller, Get, Param, Query, Post, Body } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { ConditionClassStudentsDto } from "../dto/condition-class-students.dto";
 import { GetManyQuery } from "@common/constant";
@@ -15,6 +15,7 @@ import {
     RequestQuery,
     RequestCondition,
 } from "@common/decorator/query.decorator";
+import { AddMultipleClassStudentsDto } from "../dto/add-multiple-class-students.dto";
 
 @Controller("class-students")
 @ApiTags("Class Students")
@@ -117,6 +118,25 @@ export class ClassStudentsController extends BaseControllerFactory<ClassStudents
             user,
             { student_id: studentId },
             query,
+        );
+    }
+
+    @Post(":classId/add-multiple")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Thêm nhiều sinh viên vào một lớp",
+        description:
+            "API để admin thêm nhiều sinh viên (student_id) vào một class trong một lần gọi",
+    })
+    async addMultipleStudents(
+        @ReqUser() user: User,
+        @Param("classId") classId: string,
+        @Body() dto: AddMultipleClassStudentsDto,
+    ) {
+        return this.classStudentsService.addMultipleStudents(
+            user,
+            classId,
+            dto.student_ids,
         );
     }
 }
