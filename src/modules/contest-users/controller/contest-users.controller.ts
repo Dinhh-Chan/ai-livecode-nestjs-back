@@ -39,6 +39,18 @@ export class ContestUsersController extends BaseControllerFactory<ContestUsers>(
         return this.contestUsersService.requestJoin(user, dto.contest_id);
     }
 
+    @Post(":contestId/start")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "User bắt đầu làm bài trong contest",
+        description:
+            "API để user bắt đầu làm bài trong contest (set start_at = now). User phải đã được ENROLLED mới có thể start.",
+    })
+    @ApiRecordResponse(ContestUsers)
+    async start(@ReqUser() user: User, @Param("contestId") contestId: string) {
+        return this.contestUsersService.start(user, contestId);
+    }
+
     @Post(":contestId/users/:userId/increment")
     @ApiOperation({ summary: "Tăng số bài ACCEPT cho user trong contest" })
     async incrementAccepted(

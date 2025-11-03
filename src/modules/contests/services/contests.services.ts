@@ -142,6 +142,35 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             ranking = [];
         }
 
+        // Kiểm tra user hiện tại đã start chưa và status
+        const currentUserContestUser = await this.contestUsersService.getOne(
+            user,
+            {
+                contest_id: id,
+                user_id: user._id,
+            } as any,
+            {},
+        );
+
+        const is_start = !!currentUserContestUser?.start_at;
+
+        // Xác định status của user hiện tại
+        let status: "pending" | "enrolled" | "not-participant";
+        if (!currentUserContestUser) {
+            status = "not-participant";
+        } else if (
+            currentUserContestUser.status === ContestUserStatus.PENDING
+        ) {
+            status = "pending";
+        } else if (
+            currentUserContestUser.status === ContestUserStatus.ENROLLED
+        ) {
+            status = "enrolled";
+        } else {
+            // REJECTED hoặc các trạng thái khác
+            status = "not-participant";
+        }
+
         // Lấy danh sách ContestProblems
         const contestProblems = await this.contestProblemsService.getMany(
             user,
@@ -181,6 +210,8 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
                 contest_users: contestUsersWithDetails,
                 contest_problems: contestProblemsWithDetails,
                 ranking,
+                is_start,
+                status,
             };
         }
 
@@ -190,6 +221,8 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contest_users: contestUsersWithDetails,
             contest_problems: contestProblems,
             ranking,
+            is_start,
+            status,
         };
     }
 

@@ -5,6 +5,7 @@ import {
     IsOptional,
     IsBoolean,
     IsEnum,
+    IsDateString,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
 import { ContestUserStatus } from "../entities/contest-users.entity";
@@ -43,4 +44,9 @@ export class CreateContestUsersDto {
         example: ContestUserStatus.PENDING,
     })
     status?: ContestUserStatus;
+
+    @IsDateString()
+    @IsOptional()
+    @EntityDefinition.field({ label: "Thời điểm bắt đầu làm bài" })
+    start_at?: Date;
 }

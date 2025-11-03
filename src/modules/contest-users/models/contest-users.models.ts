@@ -79,4 +79,11 @@ export class ContestUsersModel extends Model implements ContestUsers {
         field: "_status",
     })
     status: ContestUserStatus;
+
+    @Column({
+        type: DataType.DATE,
+        allowNull: true,
+        field: "_start_at",
+    })
+    start_at?: Date;
 }

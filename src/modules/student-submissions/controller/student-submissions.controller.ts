@@ -35,7 +35,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
         authorize: true,
         routes: {
             getById: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                roles: [SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT],
             },
             getMany: {
                 enable: false,
@@ -244,6 +244,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
 
     // Routes với prefix "submission/" để tránh conflict với route "page"
     @Get("submission/:submissionId/result")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
     @ApiOperation({ summary: "Lấy kết quả submission từ Judge0" })
     @ApiResponse({
         status: 200,
@@ -263,6 +264,7 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
     }
 
     @Get("submission/:submissionId")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.STUDENT)
     @ApiOperation({ summary: "Lấy thông tin submission theo ID" })
     @ApiResponse({
         status: 200,

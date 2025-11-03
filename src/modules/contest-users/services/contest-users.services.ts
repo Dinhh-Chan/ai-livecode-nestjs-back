@@ -218,4 +218,44 @@ export class ContestUsersService extends BaseService<
             order_index: 0,
         } as any);
     }
+
+    /**
+     * User bắt đầu làm bài trong contest (set start_at = now)
+     */
+    async start(user: User, contestId: string): Promise<ContestUsers> {
+        // Kiểm tra xem user đã tham gia contest chưa
+        const contestUser = await this.getOne(
+            user,
+            { contest_id: contestId, user_id: user._id } as any,
+            {},
+        );
+
+        if (!contestUser) {
+            throw ApiError.NotFound("error-contest-user-not-found", {
+                message: "Bạn chưa tham gia contest này",
+            });
+        }
+
+        if (contestUser.status !== ContestUserStatus.ENROLLED) {
+            throw ApiError.BadRequest("error-contest-user-not-enrolled", {
+                message: "Bạn chưa được duyệt tham gia contest này",
+            });
+        }
+
+        // Nếu đã có start_at rồi thì không cập nhật lại
+        if (contestUser.start_at) {
+            this.logger.log(
+                `User ${user._id} already started contest ${contestId} at ${contestUser.start_at}`,
+            );
+            return contestUser;
+        }
+
+        // Set start_at = now
+        const now = new Date();
+        return this.updateOne(
+            user,
+            { contest_id: contestId, user_id: user._id } as any,
+            { start_at: now } as any,
+        );
+    }
 }

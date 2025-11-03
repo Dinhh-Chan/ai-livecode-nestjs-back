@@ -30,6 +30,7 @@ export type ErrorCode =
     | "error-teacher-already-assigned"
     | "error-contest-user-not-found"
     | "error-contest-user-already-enrolled"
+    | "error-contest-user-not-enrolled"
     | "error-contest-user-already-requested"
     | "error-contest-user-already-approved"
     | "error-contest-user-already-rejected"

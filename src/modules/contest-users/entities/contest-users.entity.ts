@@ -9,6 +9,7 @@ import {
     IsNumber,
     IsBoolean,
     IsEnum,
+    IsDateString,
 } from "class-validator";
 import { HydratedDocument } from "mongoose";
 
@@ -80,6 +81,15 @@ export class ContestUsers implements BaseEntity {
         example: ContestUserStatus.PENDING,
     })
     status: ContestUserStatus;
+
+    /**
+     * Thời điểm user bắt đầu làm bài trong contest
+     */
+    @IsDateString()
+    @IsOptional()
+    @Prop()
+    @EntityDefinition.field({ label: "Thời điểm bắt đầu làm bài" })
+    start_at?: Date;
 }
 
 export type ContestUsersDocument = HydratedDocument<ContestUsers>;
