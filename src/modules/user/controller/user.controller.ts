@@ -207,6 +207,10 @@ export class UserController extends BaseControllerFactory<User>(
 
         if (page) query.page = Number(page);
         if (limit) query.limit = Number(limit);
+        // Tính skip dựa trên page và limit
+        if (query.page && query.limit) {
+            query.skip = (query.page - 1) * query.limit;
+        }
         if (select) {
             // Chuyển đổi id thành _id và parse select
             const normalizedSelect = select
@@ -235,9 +239,4 @@ export class UserController extends BaseControllerFactory<User>(
 
         return this.userService.getPage(user, {}, query);
     }
-
-    // @Get("test")
-    // async test() {
-    //     return this.userService.testUser();
-    // }
 }
