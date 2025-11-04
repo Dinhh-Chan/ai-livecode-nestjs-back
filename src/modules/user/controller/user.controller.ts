@@ -14,7 +14,7 @@ import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { UserProfileDto } from "../dto/user-profile.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
-import { GetManyQuery } from "@common/constant";
+import { GetManyQuery, GetPageQuery, OperatorType } from "@common/constant";
 
 @Controller("user")
 @ApiTags("user")
@@ -193,21 +193,47 @@ export class UserController extends BaseControllerFactory<User>(
             return { page: 1, limit: 0, total: 0, result: [] };
         }
         const isExact = exact === "true";
-        const conditions: any = isExact
-            ? { username: { $eq: q } }
-            : { username: { $like: `%${q}%` } };
-        const query: any = {} as GetManyQuery<User>;
+        const operator = isExact ? OperatorType.EQUAL : OperatorType.CONTAIN;
+
+        const query: GetPageQuery<User> = {
+            filters: [
+                {
+                    field: "username",
+                    operator,
+                    values: [q],
+                },
+            ],
+        };
+
         if (page) query.page = Number(page);
         if (limit) query.limit = Number(limit);
-        if (select)
-            query.select = select
+        if (select) {
+            // Chuyển đổi id thành _id và parse select
+            const normalizedSelect = select
                 .split(",")
+                .map((f) => (f.trim() === "id" ? "_id" : f.trim()))
+                .filter((f) => f)
                 .reduce(
-                    (acc, f) => ((acc[f] = 1), acc),
-                    {} as Record<string, number>,
+                    (acc, f) => ((acc[f] = 1 as 0 | 1), acc),
+                    {} as Record<string, 0 | 1>,
                 );
-        if (sort) query.sort = { [sort]: 1 } as any;
-        return this.userService.getPage(user, conditions, query as any);
+            query.select = normalizedSelect as any;
+        }
+        if (sort) {
+            // Parse sort: có thể là JSON hoặc field name đơn giản
+            try {
+                query.sort = JSON.parse(sort);
+            } catch (e) {
+                // Nếu không phải JSON, coi như là field name
+                if (sort.startsWith("-")) {
+                    query.sort = { [sort.substring(1)]: -1 } as any;
+                } else {
+                    query.sort = { [sort]: 1 } as any;
+                }
+            }
+        }
+
+        return this.userService.getPage(user, {}, query);
     }
 
     // @Get("test")
