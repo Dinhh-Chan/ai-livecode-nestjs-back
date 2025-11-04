@@ -344,4 +344,78 @@ export class ContestSubmissionsService extends BaseService<
             { sort: { solved_at: -1 } },
         );
     }
+
+    /**
+     * Ghi đè getById để trả về submission với thông tin đầy đủ
+     * Tương tự như StudentSubmissionsService.getById
+     */
+    async getById(user: User, id: string, query?: any): Promise<any> {
+        this.logger.log(`Getting contest submission by ID: ${id}`);
+        const submission = await this.contestSubmissionsRepository.getById(
+            id,
+            {},
+        );
+
+        if (!submission) {
+            this.logger.error(`Contest submission not found with ID: ${id}`);
+            throw ApiError.NotFound("error-setting-value-invalid", {
+                message: "Không tìm thấy submission",
+            });
+        }
+
+        // Lấy thông tin user
+        const studentUser = await this.userService.getById(
+            user,
+            submission.student_id,
+            {},
+        );
+        let userInfo = null;
+        if (studentUser) {
+            userInfo = {
+                _id: studentUser._id,
+                username: studentUser.username,
+                fullname: studentUser.fullname,
+                studentPtitCode: studentUser.studentPtitCode,
+            };
+        }
+
+        // Lấy thông tin problem
+        const problem = await this.problemsService.getById(
+            user,
+            submission.problem_id,
+            {},
+        );
+        let problemInfo = null;
+        if (problem) {
+            problemInfo = {
+                _id: problem._id,
+                name: problem.name,
+                description: problem.description,
+                difficulty: problem.difficulty,
+            };
+        }
+
+        // Lấy thông tin contest
+        const contest = await this.contestsService.getById(
+            user,
+            submission.contest_id,
+            {},
+        );
+        let contestInfo = null;
+        if (contest) {
+            contestInfo = {
+                _id: contest._id,
+                name: contest.name,
+                description: contest.description,
+            };
+        }
+
+        // Trả về submission với thông tin đầy đủ
+        return {
+            ...submission,
+            user: userInfo,
+            problem: problemInfo,
+            contest: contestInfo,
+        };
+    }
 }
