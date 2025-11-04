@@ -26,18 +26,40 @@ export class RequestQueryPipe
 
             const parsedSelect =
                 select &&
-                select.split(/\s+/).reduce((selectOpts, field) => {
-                    const remove = field.startsWith("-");
+                select.split(/[,\s]+/).reduce((selectOpts, field) => {
+                    const trimmedField = field.trim();
+                    if (!trimmedField) return selectOpts;
+
+                    // Chuyển đổi 'id' thành '_id' nếu là field id
+                    const normalizedField =
+                        trimmedField === "id" ? "_id" : trimmedField;
+
+                    const remove = normalizedField.startsWith("-");
                     if (remove) {
-                        const newField = field.substring(1);
+                        const newField = normalizedField.substring(1);
                         selectOpts[newField] = 0;
                     } else {
-                        selectOpts[field] = 1;
+                        selectOpts[normalizedField] = 1;
                     }
                     return selectOpts;
                 }, {});
 
-            const parsedSort = (sort && JSON.parse(sort)) || {};
+            // Parse sort: có thể là JSON string hoặc field name đơn giản
+            let parsedSort: any = {};
+            if (sort) {
+                try {
+                    // Thử parse như JSON trước
+                    parsedSort = JSON.parse(sort);
+                } catch (e) {
+                    // Nếu không phải JSON, coi như là field name đơn giản
+                    // Sắp xếp tăng dần (1) nếu không có dấu -, giảm dần (-1) nếu có dấu -
+                    if (sort.startsWith("-")) {
+                        parsedSort[sort.substring(1)] = -1;
+                    } else {
+                        parsedSort[sort] = 1;
+                    }
+                }
+            }
             if (!("_id" in parsedSort)) {
                 Object.assign(parsedSort, { _id: -1 });
             }
