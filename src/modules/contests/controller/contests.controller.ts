@@ -133,6 +133,9 @@ export class ContestsController extends BaseControllerFactory<Contests>(
             user,
             contestId,
         );
-        return res.json(result);
+        return res.json({
+            success: true,
+            ...result,
+        });
     }
 }

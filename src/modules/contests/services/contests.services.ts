@@ -794,7 +794,7 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
     async getContestRanking(
         user: User,
         contestId: string,
-    ): Promise<{ ranking: ContestRankingItemDto[] }> {
+    ): Promise<{ data: ContestRankingItemDto[] }> {
         // 1. Lấy tất cả users đã ENROLLED trong contest
         const contestUsers = await this.contestUsersService.getMany(
             user,
@@ -808,7 +808,7 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
         );
 
         if (contestUsers.length === 0) {
-            return { ranking: [] };
+            return { data: [] };
         }
 
         // 2. Lấy thông tin đầy đủ của users
@@ -836,7 +836,7 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
         );
 
         if (contestProblems.length === 0) {
-            return { ranking: [] };
+            return { data: [] };
         }
 
         const problemIds = contestProblems.map((cp: any) => cp.problem_id);
@@ -984,6 +984,6 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             },
         );
 
-        return { ranking };
+        return { data: ranking };
     }
 }
