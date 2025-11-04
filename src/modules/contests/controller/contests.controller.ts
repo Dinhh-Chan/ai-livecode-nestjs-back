@@ -3,7 +3,8 @@ import { ContestsService } from "../services/contests.services";
 import { Contests } from "../entities/contests.entity";
 import { CreateContestsDto } from "../dto/create-contests.dto";
 import { UpdateContestsDto } from "../dto/update-contests.dto";
-import { Controller, Get, Param } from "@nestjs/common";
+import { Controller, Get, Param, Res } from "@nestjs/common";
+import { Response } from "express";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { ConditionContestsDto } from "../dto/condition-contests.dto";
 import { ReqUser } from "@common/decorator/auth.decorator";
@@ -17,9 +18,8 @@ import {
 import {
     ApiListResponse,
     ApiPageResponse,
-    ApiRecordResponse,
 } from "@common/decorator/api.decorator";
-import { ContestRankingDto } from "../dto/contest-ranking.dto";
+import { ContestRankingItemDto } from "../dto/contest-ranking-item.dto";
 
 @Controller("contests")
 @ApiTags("Contests")
@@ -123,11 +123,16 @@ export class ContestsController extends BaseControllerFactory<Contests>(
         description:
             "API để lấy bảng xếp hạng của contest (giống VNOI): rank, user info, accepted_count, và trạng thái giải của từng bài tập",
     })
-    @ApiRecordResponse(ContestRankingDto)
+    @ApiListResponse(ContestRankingItemDto)
     async getContestRanking(
         @ReqUser() user: User,
         @Param("contestId") contestId: string,
+        @Res() res: Response,
     ) {
-        return this.contestsService.getContestRanking(user, contestId);
+        const result = await this.contestsService.getContestRanking(
+            user,
+            contestId,
+        );
+        return res.json(result);
     }
 }

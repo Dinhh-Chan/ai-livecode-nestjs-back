@@ -25,7 +25,6 @@ import { ProblemsService } from "@module/problems/services/problems.services";
 import { UserService } from "@module/user/service/user.service";
 import { ContestSubmissionsService } from "@module/contest-submissions/services/contest-submissions.services";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
-import type { ContestRankingDto } from "../dto/contest-ranking.dto";
 import type { ContestRankingItemDto } from "../dto/contest-ranking-item.dto";
 
 @Injectable()
@@ -795,7 +794,7 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
     async getContestRanking(
         user: User,
         contestId: string,
-    ): Promise<ContestRankingDto> {
+    ): Promise<{ ranking: ContestRankingItemDto[] }> {
         // 1. Lấy tất cả users đã ENROLLED trong contest
         const contestUsers = await this.contestUsersService.getMany(
             user,
