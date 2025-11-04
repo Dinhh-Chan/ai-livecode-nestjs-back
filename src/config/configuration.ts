@@ -120,7 +120,7 @@ export default (): Configuration => {
         address: getEnv("SERVER_ADDRESS", `http://localhost:${serverPort}`),
         port: serverPort,
         documentPath: getEnv("SERVER_DOCUMENT_PATH", "api"),
-        defaultAdminUsername: getEnv("SERVER_DEFAULT_ADMIN_PASSWORD", "admin"),
+        defaultAdminUsername: getEnv("SERVER_DEFAULT_ADMIN_USERNAME", "admin"),
         microserviceDocumentPath: getEnv(
             "SERVER_MICROSERVICE_DOCUMENT_PATH",
             "microservice/api",

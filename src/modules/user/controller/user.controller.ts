@@ -1,11 +1,14 @@
 import { RequestAuthData } from "@common/constant/class/request-auth-data";
 import { ApiRecordResponse } from "@common/decorator/api.decorator";
+import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
 import { Body, Controller, Get, Put, Req, Param, Query } from "@nestjs/common";
 
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Request } from "express";
+import { SystemRole } from "../common/constant";
 import { ChangePasswordDto } from "../dto/change-password.dto";
+import { UpdatePasswordByIdDto } from "../dto/update-password-by-id.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
 import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { UserProfileDto } from "../dto/user-profile.dto";
@@ -64,6 +67,22 @@ export class UserController extends BaseControllerFactory<User>(
     @ApiRecordResponse(User)
     async changePasswordMe(@Body() dto: ChangePasswordDto) {
         return this.userService.changePasswordMe(null, dto);
+    }
+
+    @Put(":userId/password")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiOperation({
+        summary: "Admin update password cho user theo ID",
+        description:
+            "API để admin update password cho user khác. Password sẽ được tự động hash trước khi lưu vào database.",
+    })
+    @ApiRecordResponse(User)
+    async updatePasswordById(
+        @ReqUser() user: User,
+        @Param("userId") userId: string,
+        @Body() dto: UpdatePasswordByIdDto,
+    ) {
+        return this.userService.updatePasswordById(user, userId, dto.password);
     }
 
     @Get("statistics")

@@ -80,39 +80,39 @@ export class UserService
     }
 
     async onApplicationBootstrap() {
-        const setting = await this.settingService.getSettingValue(
-            SettingKey.INIT_DATA,
+        const { defaultAdminUsername, defaultAdminPassword } =
+            this.configService.get("server", {
+                infer: true,
+            });
+
+        // Luôn kiểm tra và tạo/update admin user mỗi lần chạy server
+        const existingAdmin = await this.userRepository.getOne(
+            { username: defaultAdminUsername },
+            { enableDataPartition: false },
         );
-        const update = setting || {};
-        if (!update.isAdminCreated) {
-            const { defaultAdminUsername, defaultAdminPassword } =
-                this.configService.get("server", {
-                    infer: true,
-                });
 
-            // Kiểm tra xem admin user đã tồn tại chưa
-            const existingAdmin = await this.userRepository.getOne(
-                { username: defaultAdminUsername },
-                { enableDataPartition: false },
+        if (!existingAdmin) {
+            // Tạo mới admin user
+            await this.userRepository.create({
+                username: defaultAdminUsername,
+                email: "admin@administrator.com",
+                password: await createUserPassword(defaultAdminPassword),
+                systemRole: SystemRole.ADMIN,
+                fullname: "Administrator",
+            });
+            this.logger.log(
+                `Admin user "${defaultAdminUsername}" created successfully`,
             );
-
-            if (!existingAdmin) {
-                await this.userRepository.create({
-                    username: defaultAdminUsername,
-                    email: "admin@administrator.com",
-                    password: await createUserPassword(defaultAdminPassword),
-                    systemRole: SystemRole.ADMIN,
-                    fullname: "Administrator",
-                });
-                Logger.verbose("Admin created");
-            } else {
-                Logger.verbose("Admin user already exists, skipping creation");
-            }
-
-            update.isAdminCreated = true;
-            await this.settingService.setSettingValue(
-                SettingKey.INIT_DATA,
-                update,
+        } else {
+            // Update password của admin user để đảm bảo luôn là password mặc định
+            const hashedPassword =
+                await createUserPassword(defaultAdminPassword);
+            await this.userRepository.updateById(existingAdmin._id, {
+                password: hashedPassword,
+                systemRole: SystemRole.ADMIN, // Đảm bảo role luôn là ADMIN
+            });
+            this.logger.log(
+                `Admin user "${defaultAdminUsername}" password reset to default`,
             );
         }
     }
@@ -151,11 +151,29 @@ export class UserService
         if (!correctOldPassword) {
             throw ApiError.BadRequest("error-old-password-wrong");
         }
-        user.password = await createUserPassword(dto.newPass);
+        const hashedNewPassword = await createUserPassword(dto.newPass);
         const res = await this.userRepository.updateById(user._id, {
-            password: dto.oldPass,
+            password: hashedNewPassword,
         });
         return res;
+    }
+
+    /**
+     * Update password cho user theo ID (dùng cho admin)
+     * Tự động hash password trước khi update
+     */
+    async updatePasswordById(
+        user: User,
+        userId: string,
+        newPassword: string,
+    ): Promise<User> {
+        // Hash password trước khi update
+        const hashedPassword = await createUserPassword(newPassword);
+        const updatedUser = await this.updateById(user, userId, {
+            password: hashedPassword,
+        });
+        this.logger.log(`Password updated for user ${userId}`);
+        return updatedUser;
     }
 
     async comparePassword(user: User, password: string) {
