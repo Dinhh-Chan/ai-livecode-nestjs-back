@@ -684,11 +684,11 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             contestUsers.map((cu: any) => [cu.contest_id, cu]),
         );
 
-        // Map lại để trả về contest info kèm theo status của user
+        // Map lại để trả về contest info kèm theo status của user - gộp vào trong object contest
         return contests.map((contest: any) => {
             const contestUser = contestUserMap.get(contest._id);
             return {
-                contest,
+                ...contest,
                 status: contestUser?.status,
                 is_manager: contestUser?.is_manager || false,
                 accepted_count: contestUser?.accepted_count || 0,
@@ -747,11 +747,11 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
             result.result.map((cu: any) => [cu.contest_id, cu]),
         );
 
-        // Map lại items
+        // Map lại items - gộp các trường vào trong object contest
         const mappedItems = contests.map((contest: any) => {
             const contestUser: any = contestUserMap.get(contest._id);
             return {
-                contest,
+                ...contest,
                 status: contestUser?.status,
                 is_manager: contestUser?.is_manager || false,
                 accepted_count: contestUser?.accepted_count || 0,
