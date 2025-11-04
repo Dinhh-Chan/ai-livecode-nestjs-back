@@ -199,8 +199,31 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
                 {},
             );
 
-            // Tạo map để dễ dàng lookup
-            const problemMap = new Map(problems.map((p: any) => [p._id, p]));
+            // Lấy các submissions AC của user hiện tại trong contest này để tính is_done
+            const userACSubmissions =
+                await this.contestSubmissionsService.getMany(
+                    user,
+                    {
+                        contest_id: id,
+                        student_id: user._id,
+                        status: SubmissionStatus.ACCEPTED,
+                    } as any,
+                    {},
+                );
+            const solvedProblemIdsInContest = new Set(
+                userACSubmissions.map((sub: any) => sub.problem_id),
+            );
+
+            // Tạo map để dễ dàng lookup và set is_done từ ContestSubmissions
+            const problemMap = new Map(
+                problems.map((p: any) => [
+                    p._id,
+                    {
+                        ...p,
+                        is_done: solvedProblemIdsInContest.has(p._id),
+                    },
+                ]),
+            );
 
             // Map lại để gộp thông tin ContestProblems với Problems
             const contestProblemsWithDetails = contestProblems.map(
