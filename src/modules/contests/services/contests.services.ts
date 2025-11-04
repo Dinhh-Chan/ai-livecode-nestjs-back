@@ -960,7 +960,7 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
                     return {
                         problem_id: cp.problem_id,
                         problem_name: problem?.name || "Unknown",
-                        is_solved: isSolved,
+                        is_done: isSolved,
                         score: problemScore,
                         solved_at: submission?.solved_at || undefined,
                     };

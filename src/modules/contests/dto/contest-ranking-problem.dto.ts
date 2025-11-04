@@ -17,7 +17,7 @@ export class ContestRankingProblemDto {
         example: true,
         description: "Đã giải được bài này chưa",
     })
-    is_solved: boolean;
+    is_done: boolean;
 
     @ApiProperty({
         example: 100,
