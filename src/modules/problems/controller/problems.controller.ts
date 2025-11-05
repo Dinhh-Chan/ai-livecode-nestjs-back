@@ -1,11 +1,19 @@
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
 import { ProblemsService } from "../services/problems.services";
-import { Problems } from "../entities/problems.entity";
+import { Problems, ProblemDifficulty } from "../entities/problems.entity";
 import { CreateProblemsDto } from "../dto/create-problems.dto";
 import { UpdateProblemsDto } from "../dto/update-problems.dto";
 import { CreateBulkProblemsDto } from "../dto/create-bulk-problems.dto";
 import { CreateProblemWithTestcasesDto } from "../dto/create-problem-with-testcases.dto";
-import { Controller, Get, Param, Post, Body } from "@nestjs/common";
+import {
+    Controller,
+    Get,
+    Param,
+    Post,
+    Body,
+    Query,
+    BadRequestException,
+} from "@nestjs/common";
 import {
     ApiTags,
     ApiOperation,
@@ -361,7 +369,16 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         summary:
             "Lấy danh sách bài tập cơ bản có phân trang (không bao gồm test cases)",
         description:
-            "API để lấy danh sách bài tập có phân trang cùng với topic và subtopic nhưng không bao gồm test cases",
+            "API để lấy danh sách bài tập có phân trang cùng với topic và subtopic nhưng không bao gồm test cases. Có thể lọc theo độ khó (1-5)",
+    })
+    @ApiQuery({
+        name: "difficulty",
+        required: false,
+        description:
+            "Lọc theo độ khó (1: Dễ, 2: Trung bình, 3: Bình thường, 4: Khó, 5: Rất khó)",
+        type: Number,
+        enum: [1, 2, 3, 4, 5],
+        example: 1,
     })
     @ApiListResponse(Problems)
     @ApiCondition()
@@ -370,7 +387,28 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @ReqUser() user: User,
         @RequestCondition(ConditionProblemsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<Problems>,
+        @Query("difficulty") difficulty?: string,
     ) {
+        // Merge difficulty vào conditions nếu có
+        if (difficulty !== undefined && difficulty !== null) {
+            const difficultyNum = Number(difficulty);
+            // Validate difficulty phải là số từ 1-5
+            if (
+                isNaN(difficultyNum) ||
+                difficultyNum < 1 ||
+                difficultyNum > 5 ||
+                !Number.isInteger(difficultyNum)
+            ) {
+                throw new BadRequestException(
+                    "Độ khó phải là số nguyên từ 1 đến 5 (1: Dễ, 2: Trung bình, 3: Bình thường, 4: Khó, 5: Rất khó)",
+                );
+            }
+            conditions = {
+                ...conditions,
+                difficulty: difficultyNum as ProblemDifficulty,
+            };
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
