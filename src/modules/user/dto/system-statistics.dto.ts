@@ -187,4 +187,43 @@ export class SystemStatisticsDto {
         total_submissions: number;
         accepted_submissions: number;
     }>;
+
+    @ApiProperty({
+        description: "Thống kê theo độ khó của problems",
+        example: {
+            easy: { total: 1000, accepted: 600, ac_rate: 60.0 },
+            medium: { total: 800, accepted: 400, ac_rate: 50.0 },
+            normal: { total: 500, accepted: 200, ac_rate: 40.0 },
+            hard: { total: 300, accepted: 100, ac_rate: 33.33 },
+            very_hard: { total: 100, accepted: 20, ac_rate: 20.0 },
+        },
+    })
+    @EntityDefinition.field({ label: "Thống kê theo độ khó" })
+    difficulty_stats: Record<
+        string,
+        { total: number; accepted: number; ac_rate: number }
+    >;
+
+    @ApiProperty({
+        description: "Số lượng users hoạt động (có submission)",
+        example: {
+            today: 50,
+            this_week: 200,
+            this_month: 500,
+        },
+    })
+    @EntityDefinition.field({ label: "Active users" })
+    active_users: {
+        today: number;
+        this_week: number;
+        this_month: number;
+    };
+
+    @ApiProperty({
+        description:
+            "Tổng số bài tập đã được giải thành công (unique problems)",
+        example: 150,
+    })
+    @EntityDefinition.field({ label: "Tổng số bài đã giải được" })
+    total_solved_problems: number;
 }

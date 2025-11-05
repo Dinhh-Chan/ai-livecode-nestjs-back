@@ -498,7 +498,7 @@ export class UserService
         );
 
         // Thống kê AC rate theo problem
-        const problemAcStats = this.getProblemAcStats(allSubmissions);
+        const problemAcStats = await this.getProblemAcStats(allSubmissions);
 
         // Thống kê AC rate theo user
         const userAcStats = this.getUserAcStats(allSubmissions, allUsers);
@@ -519,7 +519,28 @@ export class UserService
 
         // Top users và problems
         const topUsers = this.getTopUsers(allSubmissions, allUsers, 10);
-        const topProblems = this.getTopProblems(allSubmissions, 10);
+        const topProblems = await this.getTopProblems(allSubmissions, 10);
+
+        // Thống kê theo độ khó
+        const difficultyStats =
+            await this.getSystemDifficultyStats(allSubmissions);
+
+        // Thống kê active users
+        const activeUsersStats = this.getActiveUsersStats(
+            allSubmissions,
+            allUsers,
+            today,
+            thisWeekStart,
+            thisMonthStart,
+        );
+
+        // Thống kê số bài đã giải được (unique problems solved)
+        const solvedProblems = new Set(
+            allSubmissions
+                .filter((s) => s.status === SubmissionStatus.ACCEPTED)
+                .map((s) => s.problem_id),
+        );
+        const totalSolvedProblems = solvedProblems.size;
 
         return {
             total_submissions: totalSubmissions,
@@ -538,6 +559,9 @@ export class UserService
             status_stats: statusStats,
             top_users: topUsers,
             top_problems: topProblems,
+            difficulty_stats: difficultyStats,
+            active_users: activeUsersStats,
+            total_solved_problems: totalSolvedProblems,
         };
     }
 
@@ -623,18 +647,19 @@ export class UserService
         return result;
     }
 
-    private getProblemAcStats(submissions: any[]): Array<{
-        problem_id: string;
-        problem_name: string;
-        total_submissions: number;
-        accepted_submissions: number;
-        ac_rate: number;
-    }> {
+    private async getProblemAcStats(submissions: any[]): Promise<
+        Array<{
+            problem_id: string;
+            problem_name: string;
+            total_submissions: number;
+            accepted_submissions: number;
+            ac_rate: number;
+        }>
+    > {
         const problemStats: Record<
             string,
             {
                 problem_id: string;
-                problem_name: string;
                 total_submissions: number;
                 accepted_submissions: number;
             }
@@ -645,7 +670,6 @@ export class UserService
             if (!problemStats[problemId]) {
                 problemStats[problemId] = {
                     problem_id: problemId,
-                    problem_name: `Problem ${problemId}`, // Có thể lấy từ ProblemsService sau
                     total_submissions: 0,
                     accepted_submissions: 0,
                 };
@@ -657,8 +681,23 @@ export class UserService
             }
         });
 
+        // Lấy tên problems từ ProblemsService
+        const problemIds = Object.keys(problemStats);
+        const problems = await this.problemsService.getMany(
+            {} as User,
+            { _id: { $in: problemIds } },
+            {},
+        );
+
+        const problemNameMap: Record<string, string> = {};
+        problems.forEach((problem) => {
+            problemNameMap[problem._id] = problem.name;
+        });
+
         return Object.values(problemStats).map((stat) => ({
             ...stat,
+            problem_name:
+                problemNameMap[stat.problem_id] || `Problem ${stat.problem_id}`,
             ac_rate:
                 Math.round(
                     (stat.accepted_submissions / stat.total_submissions) *
@@ -739,16 +778,18 @@ export class UserService
             }));
     }
 
-    private getTopProblems(
+    private async getTopProblems(
         submissions: any[],
         limit: number,
-    ): Array<{
-        problem_id: string;
-        problem_name: string;
-        total_submissions: number;
-        accepted_submissions: number;
-    }> {
-        const problemStats = this.getProblemAcStats(submissions);
+    ): Promise<
+        Array<{
+            problem_id: string;
+            problem_name: string;
+            total_submissions: number;
+            accepted_submissions: number;
+        }>
+    > {
+        const problemStats = await this.getProblemAcStats(submissions);
         return problemStats
             .sort((a, b) => b.total_submissions - a.total_submissions)
             .slice(0, limit)
@@ -784,6 +825,126 @@ export class UserService
             63: "javascript",
         };
         return languageMap[languageId] || "unknown";
+    }
+
+    private async getSystemDifficultyStats(
+        submissions: any[],
+    ): Promise<
+        Record<string, { total: number; accepted: number; ac_rate: number }>
+    > {
+        const difficultyStats: Record<
+            string,
+            { total: number; accepted: number }
+        > = {
+            easy: { total: 0, accepted: 0 },
+            medium: { total: 0, accepted: 0 },
+            normal: { total: 0, accepted: 0 },
+            hard: { total: 0, accepted: 0 },
+            very_hard: { total: 0, accepted: 0 },
+        };
+
+        // Lấy thông tin problems để biết độ khó
+        const problemIds = [...new Set(submissions.map((s) => s.problem_id))];
+        const problems = await this.problemsService.getMany(
+            {} as User,
+            { _id: { $in: problemIds } },
+            {},
+        );
+
+        const problemDifficultyMap: Record<string, number> = {};
+        problems.forEach((problem) => {
+            problemDifficultyMap[problem._id] = problem.difficulty;
+        });
+
+        // Tính toán thống kê theo độ khó
+        submissions.forEach((submission) => {
+            const difficulty = problemDifficultyMap[submission.problem_id] || 1;
+            let difficultyKey = "easy";
+            if (difficulty === ProblemDifficulty.EASY || difficulty === 1) {
+                difficultyKey = "easy";
+            } else if (
+                difficulty === ProblemDifficulty.MEDIUM ||
+                difficulty === 2
+            ) {
+                difficultyKey = "medium";
+            } else if (
+                difficulty === ProblemDifficulty.NORMAL ||
+                difficulty === 3
+            ) {
+                difficultyKey = "normal";
+            } else if (
+                difficulty === ProblemDifficulty.HARD ||
+                difficulty === 4
+            ) {
+                difficultyKey = "hard";
+            } else if (
+                difficulty === ProblemDifficulty.VERY_HARD ||
+                difficulty === 5
+            ) {
+                difficultyKey = "very_hard";
+            }
+
+            difficultyStats[difficultyKey].total++;
+            if (submission.status === SubmissionStatus.ACCEPTED) {
+                difficultyStats[difficultyKey].accepted++;
+            }
+        });
+
+        // Tính AC rate cho mỗi độ khó
+        const result: Record<
+            string,
+            { total: number; accepted: number; ac_rate: number }
+        > = {};
+        Object.entries(difficultyStats).forEach(([key, stat]) => {
+            result[key] = {
+                total: stat.total,
+                accepted: stat.accepted,
+                ac_rate:
+                    stat.total > 0
+                        ? Math.round((stat.accepted / stat.total) * 100 * 100) /
+                          100
+                        : 0,
+            };
+        });
+
+        return result;
+    }
+
+    private getActiveUsersStats(
+        submissions: any[],
+        users: User[],
+        today: Date,
+        thisWeekStart: Date,
+        thisMonthStart: Date,
+    ): {
+        today: number;
+        this_week: number;
+        this_month: number;
+    } {
+        const todayUserIds = new Set<string>();
+        const thisWeekUserIds = new Set<string>();
+        const thisMonthUserIds = new Set<string>();
+
+        submissions.forEach((submission) => {
+            const submissionDate = new Date(submission.submitted_at);
+            const userId = submission.student_id;
+
+            if (submissionDate >= today) {
+                todayUserIds.add(userId);
+            }
+            if (submissionDate >= thisWeekStart) {
+                thisWeekUserIds.add(userId);
+            }
+            if (submissionDate >= thisMonthStart) {
+                thisMonthUserIds.add(userId);
+            }
+        });
+
+        return {
+            today: todayUserIds.size,
+            this_week: thisWeekUserIds.size,
+            this_month: thisMonthUserIds.size,
+        };
     }
 
     // Helper methods for enhanced statistics
