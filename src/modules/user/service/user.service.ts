@@ -441,6 +441,46 @@ export class UserService
             { limit: 50000 }, // Lấy tối đa 50000 submissions
         );
 
+        // Enrich submissions with problem_name for downstream stats/consumers
+        try {
+            const validProblemIds = [
+                ...new Set(
+                    allSubmissions
+                        .map((s) => s.problem_id)
+                        .filter(
+                            (id) => id && id !== "undefined" && id !== "null",
+                        ),
+                ),
+            ];
+            if (validProblemIds.length > 0) {
+                const problems = await this.problemsService.getMany(
+                    {} as User,
+                    { _id: { $in: validProblemIds } },
+                    {},
+                );
+                const problemNameMap: Record<string, string> = {};
+                problems.forEach((p) => {
+                    problemNameMap[p._id] = p.name;
+                });
+                allSubmissions.forEach((s) => {
+                    const pid = s.problem_id;
+                    if (pid && pid !== "undefined" && pid !== "null") {
+                        (s as any).problem_name =
+                            problemNameMap[pid] || `Problem ${pid}`;
+                    } else {
+                        (s as any).problem_name = undefined;
+                    }
+                });
+            } else {
+                allSubmissions.forEach(
+                    (s) => ((s as any).problem_name = undefined),
+                );
+            }
+        } catch (e) {
+            // Không chặn thống kê nếu enrich lỗi, chỉ log cảnh báo
+            this.logger.warn("Failed to enrich submissions with problem_name");
+        }
+
         // Lấy tất cả users
         const allUsers = await this.userRepository.getMany({}, {});
 
@@ -535,9 +575,16 @@ export class UserService
         );
 
         // Thống kê số bài đã giải được (unique problems solved)
+        // Lọc bỏ các problem_id không hợp lệ
         const solvedProblems = new Set(
             allSubmissions
-                .filter((s) => s.status === SubmissionStatus.ACCEPTED)
+                .filter(
+                    (s) =>
+                        s.status === SubmissionStatus.ACCEPTED &&
+                        s.problem_id &&
+                        s.problem_id !== "undefined" &&
+                        s.problem_id !== "null",
+                )
                 .map((s) => s.problem_id),
         );
         const totalSolvedProblems = solvedProblems.size;
@@ -667,6 +714,15 @@ export class UserService
 
         submissions.forEach((submission) => {
             const problemId = submission.problem_id;
+            // Bỏ qua các submission có problem_id không hợp lệ
+            if (
+                !problemId ||
+                problemId === "undefined" ||
+                problemId === "null"
+            ) {
+                return;
+            }
+
             if (!problemStats[problemId]) {
                 problemStats[problemId] = {
                     problem_id: problemId,
@@ -682,11 +738,24 @@ export class UserService
         });
 
         // Lấy tên problems từ ProblemsService
-        const problemIds = Object.keys(problemStats);
+        // Lọc bỏ các problem_id không hợp lệ
+        const problemIds = Object.keys(problemStats).filter(
+            (id) => id && id !== "undefined" && id !== "null",
+        );
+
+        // Nếu không có problem_id hợp lệ nào, trả về mảng rỗng
+        if (problemIds.length === 0) {
+            return [];
+        }
+
         const problems = await this.problemsService.getMany(
             {} as User,
             { _id: { $in: problemIds } },
-            {},
+            {
+                enableDataPartition: false,
+                limit: problemIds.length || 10000,
+                select: ["_id", "name"],
+            } as any,
         );
 
         const problemNameMap: Record<string, string> = {};
@@ -789,16 +858,96 @@ export class UserService
             accepted_submissions: number;
         }>
     > {
-        const problemStats = await this.getProblemAcStats(submissions);
-        return problemStats
-            .sort((a, b) => b.total_submissions - a.total_submissions)
-            .slice(0, limit)
-            .map((stat) => ({
-                problem_id: stat.problem_id,
-                problem_name: stat.problem_name,
-                total_submissions: stat.total_submissions,
-                accepted_submissions: stat.accepted_submissions,
-            }));
+        // Tính toán thống kê theo problem_id trực tiếp
+        const problemStats: Record<
+            string,
+            {
+                problem_id: string;
+                total_submissions: number;
+                accepted_submissions: number;
+            }
+        > = {};
+
+        // Chỉ xử lý các submissions có problem_id hợp lệ
+        submissions
+            .filter(
+                (s) =>
+                    s.problem_id &&
+                    s.problem_id !== "undefined" &&
+                    s.problem_id !== "null",
+            )
+            .forEach((submission) => {
+                const problemId = submission.problem_id;
+
+                if (!problemStats[problemId]) {
+                    problemStats[problemId] = {
+                        problem_id: problemId,
+                        total_submissions: 0,
+                        accepted_submissions: 0,
+                    };
+                }
+
+                problemStats[problemId].total_submissions++;
+                if (submission.status === SubmissionStatus.ACCEPTED) {
+                    problemStats[problemId].accepted_submissions++;
+                }
+            });
+
+        // Nếu không có problem nào, trả về mảng rỗng
+        if (Object.keys(problemStats).length === 0) {
+            this.logger.warn("No valid problems found for top problems stats");
+            return [];
+        }
+
+        // Lấy danh sách problem_id để query tên
+        const problemIds = Object.keys(problemStats);
+
+        try {
+            // Lấy tên problems từ database
+            const problems = await this.problemsService.getMany(
+                {} as User,
+                { _id: { $in: problemIds } },
+                {
+                    enableDataPartition: false,
+                    limit: 1000,
+                    select: ["_id", "name"],
+                } as any,
+            );
+
+            // Map problem_id -> name
+            const problemNameMap: Record<string, string> = {};
+            problems.forEach((problem) => {
+                problemNameMap[problem._id] = problem.name;
+            });
+
+            // Tạo kết quả và sắp xếp theo số lượng submissions
+            return Object.values(problemStats)
+                .sort((a, b) => b.total_submissions - a.total_submissions)
+                .slice(0, limit)
+                .map((stat) => ({
+                    problem_id: stat.problem_id,
+                    problem_name:
+                        problemNameMap[stat.problem_id] ||
+                        `Problem ${stat.problem_id}`,
+                    total_submissions: stat.total_submissions,
+                    accepted_submissions: stat.accepted_submissions,
+                }));
+        } catch (error) {
+            this.logger.error(
+                "Error fetching problem names for top problems",
+                error,
+            );
+            // Trả về kết quả không có tên problem nếu có lỗi
+            return Object.values(problemStats)
+                .sort((a, b) => b.total_submissions - a.total_submissions)
+                .slice(0, limit)
+                .map((stat) => ({
+                    problem_id: stat.problem_id,
+                    problem_name: `Problem ${stat.problem_id}`,
+                    total_submissions: stat.total_submissions,
+                    accepted_submissions: stat.accepted_submissions,
+                }));
+        }
     }
 
     private getWeekNumber(date: Date): number {
@@ -844,11 +993,34 @@ export class UserService
         };
 
         // Lấy thông tin problems để biết độ khó
-        const problemIds = [...new Set(submissions.map((s) => s.problem_id))];
+        // Lọc bỏ các problem_id không hợp lệ
+        const problemIds = [
+            ...new Set(
+                submissions
+                    .map((s) => s.problem_id)
+                    .filter((id) => id && id !== "undefined" && id !== "null"),
+            ),
+        ];
+
+        // Nếu không có problem_id hợp lệ nào, trả về stats rỗng
+        if (problemIds.length === 0) {
+            return {
+                easy: { total: 0, accepted: 0, ac_rate: 0 },
+                medium: { total: 0, accepted: 0, ac_rate: 0 },
+                normal: { total: 0, accepted: 0, ac_rate: 0 },
+                hard: { total: 0, accepted: 0, ac_rate: 0 },
+                very_hard: { total: 0, accepted: 0, ac_rate: 0 },
+            };
+        }
+
         const problems = await this.problemsService.getMany(
             {} as User,
             { _id: { $in: problemIds } },
-            {},
+            {
+                enableDataPartition: false,
+                limit: problemIds.length || 10000,
+                select: ["_id", "difficulty"],
+            } as any,
         );
 
         const problemDifficultyMap: Record<string, number> = {};
@@ -858,6 +1030,15 @@ export class UserService
 
         // Tính toán thống kê theo độ khó
         submissions.forEach((submission) => {
+            // Bỏ qua các submission có problem_id không hợp lệ
+            if (
+                !submission.problem_id ||
+                submission.problem_id === "undefined" ||
+                submission.problem_id === "null"
+            ) {
+                return;
+            }
+
             const difficulty = problemDifficultyMap[submission.problem_id] || 1;
             let difficultyKey = "easy";
             if (difficulty === ProblemDifficulty.EASY || difficulty === 1) {
@@ -965,7 +1146,11 @@ export class UserService
         const problems = await this.problemsService.getMany(
             {} as User,
             { _id: { $in: problemIds } },
-            {},
+            {
+                enableDataPartition: false,
+                limit: problemIds.length || 10000,
+                select: ["_id", "name"],
+            } as any,
         );
 
         const problemDifficultyMap: Record<string, number> = {};
@@ -975,6 +1160,15 @@ export class UserService
 
         // Tính toán thống kê theo độ khó
         submissions.forEach((submission) => {
+            // Bỏ qua các submission có problem_id không hợp lệ
+            if (
+                !submission.problem_id ||
+                submission.problem_id === "undefined" ||
+                submission.problem_id === "null"
+            ) {
+                return;
+            }
+
             const difficulty = problemDifficultyMap[submission.problem_id] || 1;
             let difficultyKey = "easy";
             if (difficulty >= 3) difficultyKey = "hard";
@@ -1094,7 +1288,25 @@ export class UserService
             )
             .slice(0, limit);
 
-        const problemIds = [...new Set(recentSubs.map((s) => s.problem_id))];
+        // Lọc bỏ các problem_id không hợp lệ
+        const problemIds = [
+            ...new Set(
+                recentSubs
+                    .map((s) => s.problem_id)
+                    .filter((id) => id && id !== "undefined" && id !== "null"),
+            ),
+        ];
+
+        // Nếu không có problem_id hợp lệ nào, trả về với tên mặc định
+        if (problemIds.length === 0) {
+            return recentSubs.map((submission) => ({
+                problem_name: `Problem ${submission.problem_id || "Unknown"}`,
+                submitted_at: submission.submitted_at,
+                status: submission.status,
+                language: this.getLanguageName(submission.language_id),
+            }));
+        }
+
         const problems = await this.problemsService.getMany(
             {} as User,
             { _id: { $in: problemIds } },
