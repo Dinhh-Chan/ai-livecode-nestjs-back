@@ -25,7 +25,7 @@ import {
 import { ConditionProblemsDto } from "../dto/condition-problems.dto";
 import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { SystemRole } from "@module/user/common/constant";
-import { GetManyQuery, GetOneQuery } from "@common/constant";
+import { GetManyQuery, GetOneQuery, GetPageQuery } from "@common/constant";
 import {
     RequestQuery,
     RequestCondition,
@@ -413,6 +413,111 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             { path: "topic" },
             { path: "sub_topic" },
         ];
+        return this.problemsService.getPage(user, conditions, {
+            ...query,
+            population,
+        });
+    }
+
+    @Get("search")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary: "Tìm kiếm bài tập theo tên có phân trang",
+        description:
+            "API để tìm kiếm bài tập theo tên với phân trang. Tìm kiếm không phân biệt hoa thường. Có thể kết hợp với các filter khác như difficulty",
+    })
+    @ApiQuery({
+        name: "name",
+        required: true,
+        description: "Từ khóa tìm kiếm theo tên bài tập",
+        type: String,
+        example: "bài tập",
+    })
+    @ApiQuery({
+        name: "page",
+        required: false,
+        description: "Số trang (bắt đầu từ 1)",
+        type: Number,
+        example: 1,
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng bài tập trên mỗi trang",
+        type: Number,
+        example: 10,
+    })
+    @ApiQuery({
+        name: "difficulty",
+        required: false,
+        description:
+            "Lọc theo độ khó (1: Dễ, 2: Trung bình, 3: Bình thường, 4: Khó, 5: Rất khó)",
+        type: Number,
+        enum: [1, 2, 3, 4, 5],
+        example: 1,
+    })
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet()
+    async searchProblemsByName(
+        @ReqUser() user: User,
+        @RequestCondition(ConditionProblemsDto) conditions: any,
+        @RequestQuery() query: GetPageQuery<Problems>,
+        @Query("name") name: string,
+        @Query("difficulty") difficulty?: string,
+    ) {
+        // Validate name không được rỗng
+        if (!name || name.trim().length === 0) {
+            throw new BadRequestException("Tên tìm kiếm không được để trống");
+        }
+
+        // Thêm điều kiện search theo tên (không phân biệt hoa thường)
+        // Sử dụng $regex - được hỗ trợ bởi cả MongoDB và Sequelize
+        // MongoDB: $regex -> $regex với $options: "i"
+        // Sequelize: $regex -> Op.iRegexp (case-insensitive regex)
+        const searchTerm = name.trim();
+        // Escape các ký tự đặc biệt trong regex
+        const escapedSearchTerm = searchTerm.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&",
+        );
+        conditions = {
+            ...conditions,
+            name: {
+                $regex: escapedSearchTerm, // Case-insensitive search
+            },
+        };
+
+        // Merge difficulty vào conditions nếu có
+        if (difficulty !== undefined && difficulty !== null) {
+            const difficultyNum = Number(difficulty);
+            // Validate difficulty phải là số từ 1-5
+            if (
+                isNaN(difficultyNum) ||
+                difficultyNum < 1 ||
+                difficultyNum > 5 ||
+                !Number.isInteger(difficultyNum)
+            ) {
+                throw new BadRequestException(
+                    "Độ khó phải là số nguyên từ 1 đến 5 (1: Dễ, 2: Trung bình, 3: Bình thường, 4: Khó, 5: Rất khó)",
+                );
+            }
+            conditions = {
+                ...conditions,
+                difficulty: difficultyNum as ProblemDifficulty,
+            };
+        }
+
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+        ];
+
         return this.problemsService.getPage(user, conditions, {
             ...query,
             population,
