@@ -43,3 +43,6 @@ export const USER_PROBLEM_PROGRESS = "UserProblemProgress";
 // Cohorts entities
 export const COHORTS = "Cohorts";
 export const COHORT_STUDENTS = "CohortStudents";
+
+// Feedback entities
+export const FEEDBACK = "Feedback";
