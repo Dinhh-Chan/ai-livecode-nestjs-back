@@ -35,6 +35,7 @@ import { ContestProblemsModule } from "./modules/contest-problems/contest-proble
 import { UserProblemProgressModule } from "./modules/user-problem-progress/user-problem-progress.module";
 import { ContestSubmissionsModule } from "./modules/contest-submissions/contest-submissions.module";
 import { CohortsModule } from "./modules/cohorts/cohorts.module";
+import { CohortStudentsModule } from "./modules/cohort-students/cohort-students.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -72,6 +73,7 @@ import { CohortsModule } from "./modules/cohorts/cohorts.module";
         UserProblemProgressModule,
         ContestSubmissionsModule,
         CohortsModule,
+        CohortStudentsModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
