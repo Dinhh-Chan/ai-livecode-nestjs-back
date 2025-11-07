@@ -3,18 +3,38 @@ import { FeedbackService } from "../services/feedback.service";
 import { Feedback } from "../entities/feedback.entity";
 import { CreateFeedbackDto } from "../dto/create-feedback.dto";
 import { UpdateFeedbackDto } from "../dto/update-feedback.dto";
-import { Controller, Get, Param, Post, Body } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
+import {
+    Controller,
+    Get,
+    Param,
+    Post,
+    Body,
+    UploadedFile,
+    Put,
+    BadRequestException,
+} from "@nestjs/common";
+import {
+    ApiTags,
+    ApiOperation,
+    ApiParam,
+    ApiQuery,
+    ApiConsumes,
+    ApiBody,
+} from "@nestjs/swagger";
 import { ConditionFeedbackDto } from "../dto/condition-feedback.dto";
 import { GetManyQuery } from "@common/constant";
 import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
-import { ApiListResponse } from "@common/decorator/api.decorator";
+import {
+    ApiListResponse,
+    ApiRecordResponse,
+} from "@common/decorator/api.decorator";
 import {
     RequestQuery,
     RequestCondition,
 } from "@common/decorator/query.decorator";
+import { UploadFile } from "@common/decorator/file.decorator";
 
 @Controller("feedback")
 @ApiTags("Feedback")
@@ -39,6 +59,7 @@ export class FeedbackController extends BaseControllerFactory<Feedback>(
         summary: "Tạo feedback mới",
         description: "API để người dùng tạo feedback hoặc báo lỗi",
     })
+    @ApiRecordResponse(Feedback)
     async create(
         @ReqUser() user: User,
         @Body() createFeedbackDto: CreateFeedbackDto,
@@ -47,6 +68,131 @@ export class FeedbackController extends BaseControllerFactory<Feedback>(
         return this.feedbackService.create(user, {
             ...createFeedbackDto,
             user_id: user._id,
+        } as any);
+    }
+
+    @Post("with-image")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiConsumes("multipart/form-data")
+    @UploadFile()
+    @ApiOperation({
+        summary: "Tạo feedback mới với hình ảnh",
+        description:
+            "API để người dùng tạo feedback hoặc báo lỗi kèm hình ảnh đính kèm",
+    })
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                type: {
+                    type: "string",
+                    enum: ["feedback", "error"],
+                    description: "Loại feedback",
+                },
+                title: {
+                    type: "string",
+                    description: "Tiêu đề feedback",
+                },
+                description: {
+                    type: "string",
+                    description: "Mô tả chi tiết",
+                },
+                file: {
+                    type: "string",
+                    format: "binary",
+                    description: "Hình ảnh đính kèm (optional)",
+                },
+            },
+            required: ["type", "title", "description"],
+        },
+    })
+    @ApiRecordResponse(Feedback)
+    async createWithImage(
+        @ReqUser() user: User,
+        @Body() createFeedbackDto: CreateFeedbackDto,
+        @UploadedFile() file?: Express.Multer.File,
+    ) {
+        let imageUrl: string | undefined;
+        if (file) {
+            imageUrl = await this.feedbackService.saveImage(file);
+        }
+        // Tự động gán user_id từ user hiện tại
+        return this.feedbackService.create(user, {
+            ...createFeedbackDto,
+            user_id: user._id,
+            image_url: imageUrl,
+        } as any);
+    }
+
+    @Put(":id/image")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiConsumes("multipart/form-data")
+    @UploadFile()
+    @ApiOperation({
+        summary: "Cập nhật hình ảnh cho feedback",
+        description: "API để cập nhật hình ảnh đính kèm cho feedback",
+    })
+    @ApiParam({
+        name: "id",
+        description: "ID của feedback",
+        type: String,
+    })
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                file: {
+                    type: "string",
+                    format: "binary",
+                    description: "Hình ảnh đính kèm",
+                },
+            },
+            required: ["file"],
+        },
+    })
+    @ApiRecordResponse(Feedback)
+    async updateImage(
+        @ReqUser() user: User,
+        @Param("id") id: string,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException("File is required");
+        }
+
+        const feedback = await this.feedbackService.getById(user, id);
+
+        // Kiểm tra quyền: chỉ admin hoặc chủ sở hữu feedback mới được cập nhật
+        if (
+            user.systemRole !== SystemRole.ADMIN &&
+            feedback.user_id !== user._id
+        ) {
+            throw new BadRequestException(
+                "You don't have permission to update this feedback",
+            );
+        }
+
+        // Xóa ảnh cũ nếu có
+        if (feedback.image_url) {
+            await this.feedbackService.deleteImage(feedback.image_url);
+        }
+
+        // Lưu ảnh mới
+        const imageUrl = await this.feedbackService.saveImage(file);
+
+        // Cập nhật feedback
+        return this.feedbackService.updateById(user, id, {
+            image_url: imageUrl,
         } as any);
     }
 

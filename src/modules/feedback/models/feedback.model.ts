@@ -62,4 +62,11 @@ export class FeedbackModel extends Model implements Feedback {
         field: "admin_note",
     })
     admin_note?: string;
+
+    @Column({
+        type: DataType.STRING(500),
+        allowNull: true,
+        field: "image_url",
+    })
+    image_url?: string;
 }

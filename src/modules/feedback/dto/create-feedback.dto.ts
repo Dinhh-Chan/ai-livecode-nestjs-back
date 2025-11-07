@@ -46,4 +46,13 @@ export class CreateFeedbackDto {
     @IsString()
     @IsOptional()
     admin_note?: string;
+
+    @ApiProperty({
+        description: "URL hình ảnh đính kèm",
+        example: "/public/feedback-images/1234567890_image.jpg",
+        required: false,
+    })
+    @IsString()
+    @IsOptional()
+    image_url?: string;
 }

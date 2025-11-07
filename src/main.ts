@@ -15,6 +15,7 @@ import {
 import { json, urlencoded } from "body-parser";
 import { I18nMiddleware } from "nestjs-i18n";
 import "reflect-metadata";
+import * as path from "path";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -165,6 +166,11 @@ async function bootstrap() {
 
     app.use(json({ limit: "50mb" }));
     app.use(urlencoded({ limit: "50mb", extended: true }));
+
+    // Serve static files from public folder
+    app.useStaticAssets(path.join(process.cwd(), "public"), {
+        prefix: "/public",
+    });
 
     const protoConfig = getServerGrpcConfig();
 

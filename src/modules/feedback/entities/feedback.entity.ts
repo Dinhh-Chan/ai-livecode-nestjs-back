@@ -97,6 +97,15 @@ export class Feedback implements BaseEntity {
     @EntityDefinition.field({ label: "Ghi chú" })
     admin_note?: string;
 
+    /**
+     * URL hình ảnh đính kèm
+     */
+    @IsString()
+    @IsOptional()
+    @Prop()
+    @EntityDefinition.field({ label: "URL hình ảnh" })
+    image_url?: string;
+
     // Virtual fields for relationships
     @EntityDefinition.field({
         label: "Người dùng",
