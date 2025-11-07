@@ -39,3 +39,7 @@ export const CONTEST_USERS = "ContestUsers";
 export const CONTEST_PROBLEMS = "ContestProblems";
 export const CONTEST_SUBMISSIONS = "ContestSubmissions";
 export const USER_PROBLEM_PROGRESS = "UserProblemProgress";
+
+// Cohorts entities
+export const COHORTS = "Cohorts";
+export const COHORT_STUDENTS = "CohortStudents";
