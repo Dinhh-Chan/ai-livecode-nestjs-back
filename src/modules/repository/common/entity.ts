@@ -46,3 +46,7 @@ export const COHORT_STUDENTS = "CohortStudents";
 
 // Feedback entities
 export const FEEDBACK = "Feedback";
+
+// Chat entities
+export const SESSIONS = "Sessions";
+export const MESSAGES = "Messages";

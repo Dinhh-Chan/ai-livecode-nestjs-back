@@ -37,6 +37,8 @@ import { ContestSubmissionsModule } from "./modules/contest-submissions/contest-
 import { CohortsModule } from "./modules/cohorts/cohorts.module";
 import { CohortStudentsModule } from "./modules/cohort-students/cohort-students.module";
 import { FeedbackModule } from "./modules/feedback/feedback.module";
+import { SessionsModule } from "./modules/sessions/sessions.module";
+import { MessagesModule } from "./modules/messages/messages.module";
 @Module({
     imports: [
         ...DefaultModules,
@@ -76,6 +78,8 @@ import { FeedbackModule } from "./modules/feedback/feedback.module";
         CohortsModule,
         CohortStudentsModule,
         FeedbackModule,
+        SessionsModule,
+        MessagesModule,
     ],
     providers: [...DefaultProviders],
     controllers: [AppController],
