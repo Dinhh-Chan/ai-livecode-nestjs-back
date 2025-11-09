@@ -26,16 +26,36 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
                 roles: [SystemRole.ADMIN],
             },
             getById: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
             },
             getOne: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
             },
             getMany: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
             },
             getPage: {
-                roles: [SystemRole.USER, SystemRole.ADMIN],
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
             },
             updateById: {
                 roles: [SystemRole.ADMIN],
@@ -53,7 +73,12 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     }
 
     @Post("submit")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Submit code trong contest",
         description:
@@ -68,7 +93,12 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     }
 
     @Get("contest/:contestId")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách submissions trong contest",
         description:
@@ -85,7 +115,12 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     }
 
     @Get("contest/:contestId/all")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy tất cả submissions của tất cả users trong contest",
         description:
@@ -102,7 +137,12 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     }
 
     @Get("contest/:contestId/problem/:problemId")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary:
             "Lấy danh sách submissions của user cho một problem trong contest",

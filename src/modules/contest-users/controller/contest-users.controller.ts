@@ -26,7 +26,12 @@ export class ContestUsersController extends BaseControllerFactory<ContestUsers>(
     }
 
     @Post("request-join")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "User request tham gia contest",
         description:
@@ -41,7 +46,12 @@ export class ContestUsersController extends BaseControllerFactory<ContestUsers>(
     }
 
     @Post(":contestId/start")
-    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN)
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "User bắt đầu làm bài trong contest",
         description:

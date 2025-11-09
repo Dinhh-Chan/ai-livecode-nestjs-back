@@ -27,6 +27,12 @@ export class ContestProblemsController extends BaseControllerFactory<ContestProb
     }
 
     @Get("contest/:contestId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({ summary: "Lấy danh sách bài tập trong contest" })
     @ApiQuery({
         name: "includeHidden",
@@ -47,6 +53,12 @@ export class ContestProblemsController extends BaseControllerFactory<ContestProb
     }
 
     @Get("contest/:contestId/problems")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách bài tập trong contest với thông tin đầy đủ",
         description:

@@ -7,8 +7,9 @@ import { Controller, Get, Param, Res } from "@nestjs/common";
 import { Response } from "express";
 import { ApiTags, ApiOperation } from "@nestjs/swagger";
 import { ConditionContestsDto } from "../dto/condition-contests.dto";
-import { ReqUser } from "@common/decorator/auth.decorator";
+import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
+import { SystemRole } from "@module/user/common/constant";
 import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { ContestUsers } from "@module/contest-users/entities/contest-users.entity";
 import {
@@ -34,6 +35,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("ongoing")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest đang diễn ra",
         description:
@@ -48,6 +55,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("ongoing/page")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest đang diễn ra (có phân trang)",
         description:
@@ -62,6 +75,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("not-ended")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest chưa kết thúc",
         description:
@@ -76,6 +95,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("not-ended/page")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest chưa kết thúc (có phân trang)",
         description:
@@ -90,6 +115,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("mycontest")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest của user",
         description:
@@ -104,6 +135,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get("mycontest/page")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy danh sách contest của user (có phân trang)",
         description:
@@ -118,6 +155,12 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     }
 
     @Get(":contestId/ranking")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
     @ApiOperation({
         summary: "Lấy bảng xếp hạng của contest",
         description:
