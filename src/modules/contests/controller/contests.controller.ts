@@ -29,6 +29,19 @@ export class ContestsController extends BaseControllerFactory<Contests>(
     ConditionContestsDto,
     CreateContestsDto,
     UpdateContestsDto,
+    {
+        authorize: true,
+        routes: {
+            getById: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
+        },
+    },
 ) {
     constructor(private readonly contestsService: ContestsService) {
         super(contestsService);
