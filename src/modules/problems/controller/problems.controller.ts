@@ -86,6 +86,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @RequestCondition(ConditionProblemsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<Problems>,
     ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions = {
+                ...conditions,
+                is_public: true,
+            };
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -110,6 +118,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @RequestCondition(ConditionProblemsDto) conditions: any,
         @RequestQuery() query: GetOneQuery<Problems>,
     ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions = {
+                ...conditions,
+                is_public: true,
+            };
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -134,6 +150,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @RequestCondition(ConditionProblemsDto) conditions: any,
         @RequestQuery() query: GetManyQuery<Problems>,
     ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions = {
+                ...conditions,
+                is_public: true,
+            };
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -206,6 +230,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             throw new BadRequestException("Tên tìm kiếm không được để trống");
         }
 
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions = {
+                ...conditions,
+                is_public: true,
+            };
+        }
+
         // Thêm điều kiện search theo tên (không phân biệt hoa thường)
         // Sử dụng $regex - được hỗ trợ bởi cả MongoDB và Sequelize
         // MongoDB: $regex -> $regex với $options: "i"
@@ -257,6 +289,16 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     @BaseRouteSetup("getById", { authorize: false }, "get")
     @ApiRecordResponse(Problems)
     async getById(@ReqUser() user: User, @Param("id") id: string) {
+        // Nếu user là STUDENT, kiểm tra problem có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            const problem = await this.problemsService.getById(user, id, {});
+            if (!problem || !problem.is_public) {
+                throw new BadRequestException(
+                    "Không tìm thấy bài tập hoặc bài tập không công khai",
+                );
+            }
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -329,6 +371,12 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @Param("subTopicId") subTopicId: string,
         @RequestQuery() query: GetManyQuery<Problems>,
     ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        const conditions: any = { sub_topic_id: subTopicId };
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions.is_public = true;
+        }
+
         const population: PopulationDto<Problems>[] = [
             { path: "topic" },
             { path: "sub_topic" },
@@ -338,11 +386,10 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(
-            user,
-            { sub_topic_id: subTopicId },
-            { ...query, population },
-        );
+        return this.problemsService.getMany(user, conditions, {
+            ...query,
+            population,
+        });
     }
 
     @Get("admin/fix-memory-limits")
@@ -494,6 +541,14 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @RequestQuery() query: GetManyQuery<Problems>,
         @Query("difficulty") difficulty?: string,
     ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions = {
+                ...conditions,
+                is_public: true,
+            };
+        }
+
         // Merge difficulty vào conditions nếu có
         if (difficulty !== undefined && difficulty !== null) {
             const difficultyNum = Number(difficulty);
