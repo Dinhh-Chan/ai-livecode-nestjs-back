@@ -87,20 +87,32 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
     async createProblemWithTestCases(
         user: User,
         problemDto: CreateProblemsDto,
-        testCaseDtos: CreateTestCasesWithoutProblemIdDto[],
+        testCaseDtos?: CreateTestCasesWithoutProblemIdDto[],
     ): Promise<{
         problem: Problems;
         testCases: any[];
     }> {
-        this.logger.log(
-            `Creating problem with ${testCaseDtos.length} test cases`,
-        );
+        // Cho phép testCaseDtos là undefined hoặc mảng rỗng
+        const testCases = testCaseDtos || [];
+        this.logger.log(`Creating problem with ${testCases.length} test cases`);
 
         // Tạo problem trước
         const problem = await this.create(user, problemDto);
 
+        // Nếu không có test cases, chỉ trả về problem
+        if (testCases.length === 0) {
+            this.logger.log(`Created problem without test cases successfully`);
+            return {
+                problem: {
+                    ...problem,
+                    number_of_tests: 0,
+                },
+                testCases: [],
+            };
+        }
+
         // Cập nhật problem_id trong các test cases
-        const testCasesWithProblemId = testCaseDtos.map((testCase) => ({
+        const testCasesWithProblemId = testCases.map((testCase) => ({
             ...testCase,
             problem_id: problem._id,
         }));

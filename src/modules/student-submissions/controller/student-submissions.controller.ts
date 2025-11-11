@@ -10,6 +10,7 @@ import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
 import { ReqUser } from "@common/decorator/auth.decorator";
 import { SubmitCodeDto } from "../dto/submit-code.dto";
+import { SubmitMultipleChoiceDto } from "../dto/submit-multiple-choice.dto";
 import { SubmissionResponseDto } from "../dto/submission-response.dto";
 import { RankingResponseDto } from "../dto/ranking-response.dto";
 import { RankingRecordDto } from "../dto/ranking-record.dto";
@@ -105,6 +106,29 @@ export class StudentSubmissionsController extends BaseControllerFactory<StudentS
             user,
             dto,
         );
+        return submission as SubmissionResponseDto;
+    }
+
+    @Post("submit-multiple-choice")
+    @ApiOperation({
+        summary: "Submit đáp án trắc nghiệm (multiple choice)",
+        description:
+            "API để submit đáp án cho bài tập trắc nghiệm. Không cần Judge0, chỉ so sánh đáp án.",
+    })
+    @ApiResponse({
+        status: 201,
+        description: "Submit đáp án thành công",
+        type: SubmissionResponseDto,
+    })
+    async submitMultipleChoice(
+        @ReqUser() user: User,
+        @Body() dto: SubmitMultipleChoiceDto,
+    ): Promise<SubmissionResponseDto> {
+        const submission =
+            await this.studentSubmissionsService.submitMultipleChoice(
+                user,
+                dto,
+            );
         return submission as SubmissionResponseDto;
     }
 

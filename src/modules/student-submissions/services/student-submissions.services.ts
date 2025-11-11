@@ -20,6 +20,8 @@ import { UserService } from "@module/user/service/user.service";
 import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
 import { forwardRef, Inject } from "@nestjs/common";
 import { JudgeNodesService } from "@module/judge-nodes/services/judge-nodes.services";
+import { SubmitMultipleChoiceDto } from "../dto/submit-multiple-choice.dto";
+import { ProblemType } from "@module/problems/entities/problems.entity";
 
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
@@ -1518,6 +1520,110 @@ export class StudentSubmissionsService extends BaseService<
                 createdAt: (submission as any).createdAt,
                 updatedAt: (submission as any).updatedAt,
             };
+        }
+    }
+
+    /**
+     * Submit đáp án trắc nghiệm (multiple choice)
+     */
+    async submitMultipleChoice(
+        user: User,
+        dto: SubmitMultipleChoiceDto,
+    ): Promise<StudentSubmissions> {
+        try {
+            // Kiểm tra problem có tồn tại không
+            const problem = await this.problemsService.getById(
+                user,
+                dto.problem_id,
+                {},
+            );
+            if (!problem) {
+                throw ApiError.NotFound("error-setting-value-invalid", {
+                    message: "Không tìm thấy bài tập",
+                });
+            }
+
+            // Kiểm tra problem type
+            if (problem.problem_type !== ProblemType.MULTIPLE_CHOICE_FORM) {
+                throw ApiError.BadRequest("error-setting-value-invalid", {
+                    message: "Bài tập này không phải dạng trắc nghiệm",
+                });
+            }
+
+            // Kiểm tra multipleChoiceForm có tồn tại không
+            if (
+                !problem.multipleChoiceForm ||
+                typeof problem.multipleChoiceForm === "boolean"
+            ) {
+                throw ApiError.BadRequest("error-setting-value-invalid", {
+                    message: "Bài tập trắc nghiệm chưa được cấu hình",
+                });
+            }
+
+            const multipleChoiceForm = problem.multipleChoiceForm;
+
+            // Tạo submission ID
+            const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+            // So sánh đáp án
+            const isCorrect =
+                dto.answer === multipleChoiceForm.answer ||
+                Math.abs(dto.answer - multipleChoiceForm.answer) < 0.001; // Cho phép sai số nhỏ với số thực
+
+            // Tạo submission record
+            const submission = await this.createSubmission(user, {
+                submission_id: submissionId,
+                student_id: user._id,
+                problem_id: dto.problem_id,
+                class_id: dto.class_id,
+                code: `Answer: ${dto.answer}`, // Lưu đáp án dưới dạng code
+                language_id: 0, // Không có language cho multiple choice
+            });
+
+            // Cập nhật kết quả
+            await this.updateSubmissionResult(submissionId, {
+                status: isCorrect
+                    ? SubmissionStatus.ACCEPTED
+                    : SubmissionStatus.WRONG_ANSWER,
+                score: isCorrect ? 100 : 0,
+                test_cases_passed: isCorrect ? 1 : 0,
+                total_test_cases: 1,
+            });
+
+            this.logger.log(
+                `Multiple choice submission created: ${submission._id}, correct: ${isCorrect}`,
+            );
+
+            // Cập nhật tiến độ user
+            try {
+                await this.userProblemProgressService.updateProgressOnSubmission(
+                    user._id,
+                    {
+                        problem_id: dto.problem_id,
+                        status: isCorrect
+                            ? SubmissionStatus.ACCEPTED
+                            : SubmissionStatus.WRONG_ANSWER,
+                        score: isCorrect ? 100 : 0,
+                    },
+                );
+            } catch (error) {
+                this.logger.error(
+                    `Error updating user progress: ${error.message}`,
+                );
+            }
+
+            // Lấy submission đã được cập nhật
+            const updatedSubmission =
+                await this.studentSubmissionsRepository.getById(
+                    submission._id,
+                    {},
+                );
+            return updatedSubmission || submission;
+        } catch (error) {
+            this.logger.error(
+                `Error submitting multiple choice: ${error.message}`,
+            );
+            throw error;
         }
     }
 }

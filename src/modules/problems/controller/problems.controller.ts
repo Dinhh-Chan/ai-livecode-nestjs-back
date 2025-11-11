@@ -503,10 +503,15 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @ReqUser() user: User,
         @Body() dto: CreateProblemWithTestcasesDto,
     ) {
+        const { testCases: _, testcase: __, problem: ___, ...flatDto } = dto;
+        const problemDto: CreateProblemsDto = dto.problem || flatDto;
+
+        const testCases = dto.testcase || dto.testCases || [];
+
         return this.problemsService.createProblemWithTestCases(
             user,
-            dto.problem,
-            dto.testCases,
+            problemDto,
+            testCases,
         );
     }
 

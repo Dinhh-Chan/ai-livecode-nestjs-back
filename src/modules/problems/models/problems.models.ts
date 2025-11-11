@@ -10,7 +10,11 @@ import {
     Model,
     Table,
 } from "sequelize-typescript";
-import { Problems, ProblemDifficulty } from "../entities/problems.entity";
+import {
+    Problems,
+    ProblemDifficulty,
+    ProblemType,
+} from "../entities/problems.entity";
 import { Topics } from "../../topics/entities/topics.entity";
 import { SubTopics } from "../../sub-topics/entities/sub-topics.entity";
 import { TopicsModel } from "../../topics/models/topics.models";
@@ -143,6 +147,21 @@ export class ProblemsModel extends Model implements Problems {
         field: "_steps",
     })
     steps?: string;
+
+    @Column({
+        type: DataType.STRING,
+        allowNull: true,
+        defaultValue: ProblemType.COMPLETE_FUNCTION,
+        field: "_problem_type",
+    })
+    problem_type?: ProblemType;
+
+    @Column({
+        type: DataType.JSON,
+        allowNull: true,
+        field: "_multiple_choice_form",
+    })
+    multipleChoiceForm?: any;
 
     // Virtual fields for relationships
     @BelongsTo(() => TopicsModel, {

@@ -1,16 +1,40 @@
 import { Type } from "class-transformer";
-import { IsArray, ValidateNested, ArrayMinSize } from "class-validator";
+import { IsArray, ValidateNested, IsOptional } from "class-validator";
 import { CreateProblemsDto } from "./create-problems.dto";
 import { CreateTestCasesWithoutProblemIdDto } from "./create-test-cases-without-problem-id.dto";
+import { ApiProperty } from "@nestjs/swagger";
 
-export class CreateProblemWithTestcasesDto {
-    @ValidateNested()
-    @Type(() => CreateProblemsDto)
-    problem: CreateProblemsDto;
-
+export class CreateProblemWithTestcasesDto extends CreateProblemsDto {
     @IsArray()
-    @ArrayMinSize(1, { message: "Phải có ít nhất một test case" })
+    @IsOptional()
     @ValidateNested({ each: true })
     @Type(() => CreateTestCasesWithoutProblemIdDto)
-    testCases: CreateTestCasesWithoutProblemIdDto[];
+    @ApiProperty({
+        description: "Danh sách test cases (có thể để trống)",
+        required: false,
+        default: [],
+    })
+    testCases?: CreateTestCasesWithoutProblemIdDto[];
+
+    // Hỗ trợ cả testcase (chữ thường) từ request
+    @IsArray()
+    @IsOptional()
+    @ValidateNested({ each: true })
+    @Type(() => CreateTestCasesWithoutProblemIdDto)
+    @ApiProperty({
+        description: "Danh sách test cases (alias cho testCases)",
+        required: false,
+        default: [],
+    })
+    testcase?: CreateTestCasesWithoutProblemIdDto[];
+
+    // Hỗ trợ nested structure (backward compatibility)
+    @ValidateNested()
+    @IsOptional()
+    @Type(() => CreateProblemsDto)
+    @ApiProperty({
+        description: "Thông tin bài tập (nested format)",
+        required: false,
+    })
+    problem?: CreateProblemsDto;
 }

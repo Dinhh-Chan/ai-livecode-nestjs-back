@@ -9,7 +9,10 @@ import {
     IsBoolean,
     IsNumber,
     IsEnum,
+    ValidateNested,
+    IsObject,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { HydratedDocument } from "mongoose";
 
 export enum ProblemDifficulty {
@@ -18,6 +21,23 @@ export enum ProblemDifficulty {
     NORMAL = 3,
     HARD = 4,
     VERY_HARD = 5,
+}
+
+export enum ProblemType {
+    MULTIPLE_CHOICE_FORM = "multipleChoiceForm",
+    FIX_ERROR = "fixError",
+    FILL_IN_BLANK = "fillInBlank",
+    COMPLETE_FUNCTION = "completeFunction",
+}
+
+export interface MultipleChoiceOption {
+    no: number;
+    text: string;
+}
+
+export interface MultipleChoiceForm {
+    exam: MultipleChoiceOption[];
+    answer: number;
 }
 
 @Schema({
@@ -182,6 +202,32 @@ export class Problems implements BaseEntity {
     @Prop()
     @EntityDefinition.field({ label: "Steps" })
     steps?: string;
+
+    /**
+     * Loại bài tập
+     */
+    @IsEnum(ProblemType)
+    @IsOptional()
+    @Prop({ default: ProblemType.COMPLETE_FUNCTION })
+    @EntityDefinition.field({
+        label: "Loại bài tập",
+        enum: Object.values(ProblemType),
+        example: ProblemType.COMPLETE_FUNCTION,
+    })
+    problem_type?: ProblemType;
+
+    /**
+     * Form trắc nghiệm (chỉ dùng khi problem_type = multipleChoiceForm)
+     */
+    @IsObject()
+    @IsOptional()
+    @ValidateNested()
+    @Type(() => Object)
+    @Prop({ type: Object })
+    @EntityDefinition.field({
+        label: "Form trắc nghiệm",
+    })
+    multipleChoiceForm?: MultipleChoiceForm | false;
 }
 
 export type ProblemsDocument = HydratedDocument<Problems>;

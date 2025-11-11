@@ -7,7 +7,12 @@ import {
     IsEnum,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
-import { ProblemDifficulty } from "../entities/problems.entity";
+import {
+    ProblemDifficulty,
+    ProblemType,
+    MultipleChoiceForm,
+} from "../entities/problems.entity";
+import { IsObject } from "class-validator";
 
 export class CreateProblemsDto {
     @IsString()
@@ -88,4 +93,20 @@ export class CreateProblemsDto {
     @IsOptional()
     @EntityDefinition.field({ label: "Sets" })
     sets?: string;
+
+    @IsEnum(ProblemType)
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Loại bài tập",
+        enum: Object.values(ProblemType),
+        example: ProblemType.COMPLETE_FUNCTION,
+    })
+    problem_type?: ProblemType;
+
+    @IsObject()
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Form trắc nghiệm",
+    })
+    multipleChoiceForm?: MultipleChoiceForm | false;
 }
