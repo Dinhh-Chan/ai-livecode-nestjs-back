@@ -157,8 +157,17 @@ export class ProblemsModel extends Model implements Problems {
     problem_type?: ProblemType;
 
     @Column({
+        type: DataType.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+        field: "_is_multiple_choice_form",
+    })
+    is_multipleChoiceForm?: boolean;
+
+    @Column({
         type: DataType.JSON,
         allowNull: true,
+        defaultValue: {},
         field: "_multiple_choice_form",
     })
     multipleChoiceForm?: any;

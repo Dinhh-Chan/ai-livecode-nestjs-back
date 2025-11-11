@@ -11,6 +11,7 @@ import {
     IsEnum,
     ValidateNested,
     IsObject,
+    ValidateIf,
 } from "class-validator";
 import { Type } from "class-transformer";
 import { HydratedDocument } from "mongoose";
@@ -217,17 +218,31 @@ export class Problems implements BaseEntity {
     problem_type?: ProblemType;
 
     /**
-     * Form trắc nghiệm (chỉ dùng khi problem_type = multipleChoiceForm)
+     * Có phải bài tập trắc nghiệm không
      */
-    @IsObject()
+    @IsBoolean()
     @IsOptional()
-    @ValidateNested()
-    @Type(() => Object)
-    @Prop({ type: Object })
+    @Prop({ default: false })
+    @EntityDefinition.field({
+        label: "Có phải bài tập trắc nghiệm",
+        example: false,
+    })
+    is_multipleChoiceForm?: boolean;
+
+    /**
+     * Form trắc nghiệm (chỉ dùng khi is_multipleChoiceForm = true)
+     */
+    @IsOptional()
+    @ValidateIf(
+        (o) =>
+            o.multipleChoiceForm !== undefined && o.multipleChoiceForm !== null,
+    )
+    @IsObject()
+    @Prop({ type: Object, default: {} })
     @EntityDefinition.field({
         label: "Form trắc nghiệm",
     })
-    multipleChoiceForm?: MultipleChoiceForm | false;
+    multipleChoiceForm?: MultipleChoiceForm | {};
 }
 
 export type ProblemsDocument = HydratedDocument<Problems>;

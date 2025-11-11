@@ -5,6 +5,7 @@ import {
     IsNumber,
     IsOptional,
     IsEnum,
+    ValidateIf,
 } from "class-validator";
 import { EntityDefinition } from "@common/constant/class/entity-definition";
 import {
@@ -12,7 +13,6 @@ import {
     ProblemType,
     MultipleChoiceForm,
 } from "../entities/problems.entity";
-import { IsObject } from "class-validator";
 
 export class CreateProblemsDto {
     @IsString()
@@ -103,10 +103,17 @@ export class CreateProblemsDto {
     })
     problem_type?: ProblemType;
 
-    @IsObject()
+    @IsBoolean()
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Có phải bài tập trắc nghiệm",
+        example: false,
+    })
+    is_multipleChoiceForm?: boolean;
+
     @IsOptional()
     @EntityDefinition.field({
         label: "Form trắc nghiệm",
     })
-    multipleChoiceForm?: MultipleChoiceForm | false;
+    multipleChoiceForm?: MultipleChoiceForm | {};
 }

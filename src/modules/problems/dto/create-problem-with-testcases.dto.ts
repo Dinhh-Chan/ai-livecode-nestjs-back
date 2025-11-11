@@ -1,10 +1,19 @@
 import { Type } from "class-transformer";
-import { IsArray, ValidateNested, IsOptional } from "class-validator";
+import { IsArray, ValidateNested, IsOptional, IsObject } from "class-validator";
 import { CreateProblemsDto } from "./create-problems.dto";
 import { CreateTestCasesWithoutProblemIdDto } from "./create-test-cases-without-problem-id.dto";
 import { ApiProperty } from "@nestjs/swagger";
 
-export class CreateProblemWithTestcasesDto extends CreateProblemsDto {
+export class CreateProblemWithTestcasesDto {
+    @IsObject()
+    @ValidateNested()
+    @Type(() => CreateProblemsDto)
+    @ApiProperty({
+        description: "Thông tin bài tập",
+        type: CreateProblemsDto,
+    })
+    problem: CreateProblemsDto;
+
     @IsArray()
     @IsOptional()
     @ValidateNested({ each: true })
@@ -27,14 +36,4 @@ export class CreateProblemWithTestcasesDto extends CreateProblemsDto {
         default: [],
     })
     testcase?: CreateTestCasesWithoutProblemIdDto[];
-
-    // Hỗ trợ nested structure (backward compatibility)
-    @ValidateNested()
-    @IsOptional()
-    @Type(() => CreateProblemsDto)
-    @ApiProperty({
-        description: "Thông tin bài tập (nested format)",
-        required: false,
-    })
-    problem?: CreateProblemsDto;
 }

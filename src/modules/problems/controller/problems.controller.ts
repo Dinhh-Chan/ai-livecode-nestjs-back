@@ -503,10 +503,15 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         @ReqUser() user: User,
         @Body() dto: CreateProblemWithTestcasesDto,
     ) {
-        const { testCases: _, testcase: __, problem: ___, ...flatDto } = dto;
-        const problemDto: CreateProblemsDto = dto.problem || flatDto;
+        // Lấy problem từ dto
+        const problemDto = dto.problem;
 
-        const testCases = dto.testcase || dto.testCases || [];
+        // Lấy test cases và xử lý input/input_data
+        const testCases = (dto.testcase || dto.testCases || []).map((tc) => ({
+            ...tc,
+            // Hỗ trợ cả input và input_data
+            input_data: tc.input_data || tc.input || "",
+        }));
 
         return this.problemsService.createProblemWithTestCases(
             user,

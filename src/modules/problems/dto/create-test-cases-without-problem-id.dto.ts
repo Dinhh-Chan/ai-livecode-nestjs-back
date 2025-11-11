@@ -8,10 +8,19 @@ import {
 import { EntityDefinition } from "@common/constant/class/entity-definition";
 
 export class CreateTestCasesWithoutProblemIdDto {
+    // Hỗ trợ cả input và input_data
     @IsString()
-    @IsNotEmpty({ message: "Dữ liệu đầu vào không được để trống" })
-    @EntityDefinition.field({ label: "Dữ liệu đầu vào", required: true })
-    input_data: string;
+    @IsOptional()
+    @EntityDefinition.field({ label: "Dữ liệu đầu vào", required: false })
+    input_data?: string;
+
+    @IsString()
+    @IsOptional()
+    @EntityDefinition.field({
+        label: "Dữ liệu đầu vào (alias)",
+        required: false,
+    })
+    input?: string;
 
     @IsString()
     @IsNotEmpty({ message: "Kết quả mong đợi không được để trống" })

@@ -21,7 +21,10 @@ import { UserProblemProgressService } from "@module/user-problem-progress/servic
 import { forwardRef, Inject } from "@nestjs/common";
 import { JudgeNodesService } from "@module/judge-nodes/services/judge-nodes.services";
 import { SubmitMultipleChoiceDto } from "../dto/submit-multiple-choice.dto";
-import { ProblemType } from "@module/problems/entities/problems.entity";
+import {
+    ProblemType,
+    MultipleChoiceForm,
+} from "@module/problems/entities/problems.entity";
 
 @Injectable()
 export class StudentSubmissionsService extends BaseService<
@@ -1543,24 +1546,38 @@ export class StudentSubmissionsService extends BaseService<
                 });
             }
 
-            // Kiểm tra problem type
-            if (problem.problem_type !== ProblemType.MULTIPLE_CHOICE_FORM) {
+            // Kiểm tra is_multipleChoiceForm
+            if (!problem.is_multipleChoiceForm) {
                 throw ApiError.BadRequest("error-setting-value-invalid", {
                     message: "Bài tập này không phải dạng trắc nghiệm",
                 });
             }
 
-            // Kiểm tra multipleChoiceForm có tồn tại không
+            // Kiểm tra multipleChoiceForm có tồn tại và là object không
             if (
                 !problem.multipleChoiceForm ||
-                typeof problem.multipleChoiceForm === "boolean"
+                typeof problem.multipleChoiceForm !== "object" ||
+                Array.isArray(problem.multipleChoiceForm)
             ) {
                 throw ApiError.BadRequest("error-setting-value-invalid", {
                     message: "Bài tập trắc nghiệm chưa được cấu hình",
                 });
             }
 
-            const multipleChoiceForm = problem.multipleChoiceForm;
+            const multipleChoiceForm =
+                problem.multipleChoiceForm as MultipleChoiceForm;
+
+            // Kiểm tra multipleChoiceForm có property answer không (không phải object rỗng)
+            if (
+                !multipleChoiceForm ||
+                typeof multipleChoiceForm !== "object" ||
+                !("answer" in multipleChoiceForm) ||
+                typeof multipleChoiceForm.answer !== "number"
+            ) {
+                throw ApiError.BadRequest("error-setting-value-invalid", {
+                    message: "Bài tập trắc nghiệm chưa được cấu hình đầy đủ",
+                });
+            }
 
             // Tạo submission ID
             const submissionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
