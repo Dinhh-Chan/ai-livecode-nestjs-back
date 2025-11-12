@@ -1577,6 +1577,16 @@ export class UserService
                 .map(([date, count]) => ({ date, count }))
                 .sort((a, b) => b.date.localeCompare(a.date)); // Sắp xếp mới nhất trước
 
+        // 8. Đếm tổng số submission của user
+        const totalSubmissions = await this.studentSubmissionsService.getMany(
+            user,
+            {
+                student_id: userId,
+            } as any,
+            {},
+        );
+        const submission_count = totalSubmissions.length;
+
         return {
             rank,
             username: user.username,
@@ -1588,6 +1598,7 @@ export class UserService
             recent_ac: recentAC,
             skills,
             activity_data,
+            submission_count,
         };
     }
 }

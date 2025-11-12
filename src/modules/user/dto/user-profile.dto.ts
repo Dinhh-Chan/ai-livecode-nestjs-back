@@ -70,4 +70,10 @@ export class UserProfileDto {
         ],
     })
     activity_data: Array<{ date: string; count: number }>;
+
+    @ApiProperty({
+        example: 1234,
+        description: "Tổng số submission của user",
+    })
+    submission_count: number;
 }
