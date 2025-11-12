@@ -255,31 +255,6 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
             });
         }
 
-        // Lấy danh sách teachers với thông tin user
-        const courseTeachers =
-            await this.coursesRepository.getCourseTeachers(id);
-        const teacherIds = courseTeachers.map((ct) => ct.teacher_id);
-        let teachers: any[] = [];
-        if (teacherIds.length > 0) {
-            // Lấy tất cả users cùng lúc
-            const teacherUsers = await this.userService.getMany(
-                user,
-                { _id: { $in: teacherIds } } as any,
-                {},
-            );
-            const userMap = new Map(teacherUsers.map((u: any) => [u._id, u]));
-            teachers = courseTeachers.map((ct) => {
-                const teacherUser = userMap.get(ct.teacher_id);
-                return {
-                    _id: ct.teacher_id,
-                    username: teacherUser?.username,
-                    fullname: teacherUser?.fullname,
-                    email: teacherUser?.email,
-                    role: ct.role,
-                };
-            });
-        }
-
         // Lấy danh sách problems với thông tin chi tiết
         const problems = await this.courseProblemsService.findWithDetails(
             user,
@@ -330,7 +305,6 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
         return {
             ...course,
             students: studentsWithProgress,
-            teachers,
             problems,
         };
     }
