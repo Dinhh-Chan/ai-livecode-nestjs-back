@@ -1541,6 +1541,42 @@ export class UserService
             }),
         );
 
+        // 7. Activity data - số submission theo ngày (giống GitHub heatmap)
+        // Lấy tất cả submissions của user (giới hạn 1 năm gần nhất trong code)
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        oneYearAgo.setHours(0, 0, 0, 0); // Bắt đầu từ đầu ngày
+
+        const allSubmissions = await this.studentSubmissionsService.getMany(
+            user,
+            {
+                student_id: userId,
+            } as any,
+            {
+                sort: { submitted_at: -1 },
+                limit: 10000, // Lấy tối đa 10000 submissions
+            },
+        );
+
+        // Group submissions theo ngày (YYYY-MM-DD) và filter trong 1 năm gần nhất
+        const activityMap: Record<string, number> = {};
+        allSubmissions.forEach((submission: any) => {
+            if (submission.submitted_at) {
+                const date = new Date(submission.submitted_at);
+                // Chỉ tính các submission trong 1 năm gần nhất
+                if (date >= oneYearAgo) {
+                    const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
+                    activityMap[dateStr] = (activityMap[dateStr] || 0) + 1;
+                }
+            }
+        });
+
+        // Tạo array activity_data, sắp xếp theo ngày (mới nhất trước)
+        const activity_data: Array<{ date: string; count: number }> =
+            Object.entries(activityMap)
+                .map(([date, count]) => ({ date, count }))
+                .sort((a, b) => b.date.localeCompare(a.date)); // Sắp xếp mới nhất trước
+
         return {
             rank,
             username: user.username,
@@ -1551,6 +1587,7 @@ export class UserService
             languages,
             recent_ac: recentAC,
             skills,
+            activity_data,
         };
     }
 }

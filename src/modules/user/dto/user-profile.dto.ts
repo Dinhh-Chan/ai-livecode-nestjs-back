@@ -51,4 +51,23 @@ export class UserProfileDto {
         description: "Skills - các subtopics có problem AC",
     })
     skills: SkillStatDto[];
+
+    @ApiProperty({
+        type: "array",
+        items: {
+            type: "object",
+            properties: {
+                date: { type: "string", example: "2025-11-12" },
+                count: { type: "number", example: 5 },
+            },
+        },
+        description:
+            "Dữ liệu hoạt động theo ngày (giống GitHub heatmap) - số submission trong mỗi ngày",
+        example: [
+            { date: "2025-11-12", count: 5 },
+            { date: "2025-11-11", count: 3 },
+            { date: "2025-11-10", count: 0 },
+        ],
+    })
+    activity_data: Array<{ date: string; count: number }>;
 }
