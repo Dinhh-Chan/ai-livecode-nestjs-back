@@ -9,7 +9,7 @@ import { GetManyQuery, GetPageQuery } from "@common/constant";
 import { ApiError } from "@config/exception/api-error";
 import { CreateCourseStudentDto } from "../dto/create-course-student.dto";
 import { CourseProblemsService } from "@module/course-problems/services/course-problems.service";
-import { StudentSubmissionsRepository } from "@module/student-submissions/repository/student-submissions-repository.interface";
+import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
 
 @Injectable()
@@ -22,8 +22,8 @@ export class CourseStudentsService extends BaseService<
         private readonly courseStudentsRepository: CourseStudentsRepository,
         @Inject(forwardRef(() => CourseProblemsService))
         private readonly courseProblemsService: CourseProblemsService,
-        @InjectRepository(Entity.STUDENT_SUBMISSIONS)
-        private readonly studentSubmissionsRepository: StudentSubmissionsRepository,
+        @Inject(forwardRef(() => StudentSubmissionsService))
+        private readonly studentSubmissionsService: StudentSubmissionsService,
     ) {
         super(courseStudentsRepository);
     }
@@ -137,11 +137,18 @@ export class CourseStudentsService extends BaseService<
         // Lấy submissions của học viên cho các bài tập trong khóa học
         const problemsWithProgress = await Promise.all(
             problems.map(async (cp: any) => {
+                // Tạo user object giả để truyền vào service (chỉ cần _id)
+                const tempUser = { _id: studentId } as User;
                 const submissions =
-                    await this.studentSubmissionsRepository.findByStudentAndProblem(
-                        studentId,
-                        cp.problem_id,
-                        100, // lấy nhiều submissions để tìm best submission
+                    await this.studentSubmissionsService.getMany(
+                        tempUser,
+                        {
+                            student_id: studentId,
+                            problem_id: cp.problem_id,
+                        } as any,
+                        {
+                            sort: { submitted_at: -1 },
+                        },
                     );
 
                 // Tìm submission ACCEPTED tốt nhất (score cao nhất)
