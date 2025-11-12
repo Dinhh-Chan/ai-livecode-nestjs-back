@@ -1,4 +1,5 @@
 import { CoursesModel } from "@module/courses/models/courses.model";
+import { CourseProblemsModel } from "@module/course-problems/models/course-problems.model";
 import { HamSinhMaModel } from "@module/quy-tac-ma/models/ham-sinh-ma.model";
 import { QuyTacMaModel } from "@module/quy-tac-ma/models/quy-tac-ma.model";
 import { ProblemsModel } from "@module/problems/models/problems.models";
@@ -41,6 +42,7 @@ export const SequelizeModel: ModelCtor<Model>[] = [
     DataPartitionModel,
     DataPartitionUserModel,
     CoursesModel,
+    CourseProblemsModel,
     CourseStudent,
     CourseTeacher,
 ];

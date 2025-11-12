@@ -32,6 +32,8 @@ import { ClassStudentsModule } from "./modules/class-students/class-students.mod
 import { ContestsModule } from "./modules/contests/contests.module";
 import { ContestUsersModule } from "./modules/contest-users/contest-users.module";
 import { ContestProblemsModule } from "./modules/contest-problems/contest-problems.module";
+import { CourseStudentsModule } from "./modules/course-students/course-students.module";
+import { CourseProblemsModule } from "./modules/course-problems/course-problems.module";
 import { UserProblemProgressModule } from "./modules/user-problem-progress/user-problem-progress.module";
 import { ContestSubmissionsModule } from "./modules/contest-submissions/contest-submissions.module";
 import { CohortsModule } from "./modules/cohorts/cohorts.module";
@@ -68,6 +70,8 @@ import { MessagesModule } from "./modules/messages/messages.module";
         StudentSubmissionsModule,
         TestCaseResultsModule,
         CoursesModule,
+        CourseStudentsModule,
+        CourseProblemsModule,
         ClassModule,
         ClassStudentsModule,
         ContestsModule,

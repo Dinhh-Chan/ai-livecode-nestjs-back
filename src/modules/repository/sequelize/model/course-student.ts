@@ -14,9 +14,13 @@ import { UserModel } from "./user.model";
 
 @Table({
     tableName: Entity.COURSE_STUDENT,
-    timestamps: true,
-    createdAt: "enrolled_at",
-    updatedAt: "updated_at",
+    timestamps: false,
+    indexes: [
+        {
+            unique: true,
+            fields: ["course_id", "student_id"],
+        },
+    ],
 })
 export class CourseStudent extends Model {
     @PrimaryKey
@@ -41,23 +45,9 @@ export class CourseStudent extends Model {
         type: DataType.DATE,
         allowNull: false,
         defaultValue: DataType.NOW,
-        field: "enrolled_at",
+        field: "join_at",
     })
-    enrolled_at?: Date;
-    @Column({
-        type: DataType.DATE,
-        allowNull: false,
-        defaultValue: DataType.NOW,
-        field: "updated_at",
-    })
-    updated_at?: Date;
-    @Column({
-        type: DataType.DATE,
-        allowNull: false,
-        defaultValue: DataType.NOW,
-        field: "completed_at",
-    })
-    completed_at?: Date;
+    join_at?: Date;
 
     //Relationships
     @BelongsTo(() => CoursesModel, "course_id")
