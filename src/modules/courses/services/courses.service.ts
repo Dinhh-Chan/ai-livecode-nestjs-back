@@ -4,13 +4,19 @@ import { BaseTransaction } from "@module/repository/common/base-transaction.inte
 import { InjectRepository } from "@module/repository/common/repository";
 import { InjectTransaction } from "@module/repository/common/transaction";
 import { User } from "@module/user/entities/user.entity";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject, forwardRef } from "@nestjs/common";
 import { Courses } from "../entities/courses.entity";
 import { CoursesRepository } from "../repository/courses-repository.interface";
 import { ApiError } from "@config/exception/api-error";
 import { EnrollStudentDto } from "../dto/enroll-student.dto";
 import { AssignTeacherDto, TeacherRole } from "../dto/assign-teacher.dto";
 import { SelfEnrollDto } from "../dto/self-enroll.dto";
+import { CourseStudentsService } from "@module/course-students/services/course-students.service";
+import { CourseProblemsService } from "@module/course-problems/services/course-problems.service";
+import { UserService } from "@module/user/service/user.service";
+import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
+import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
+import { GetByIdQuery } from "@common/constant";
 
 @Injectable()
 export class CoursesService extends BaseService<Courses, CoursesRepository> {
@@ -19,6 +25,14 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
         private readonly coursesRepository: CoursesRepository,
         @InjectTransaction()
         private readonly coursesTransaction: BaseTransaction,
+        @Inject(forwardRef(() => CourseStudentsService))
+        private readonly courseStudentsService: CourseStudentsService,
+        @Inject(forwardRef(() => CourseProblemsService))
+        private readonly courseProblemsService: CourseProblemsService,
+        @Inject(forwardRef(() => UserService))
+        private readonly userService: UserService,
+        @Inject(forwardRef(() => StudentSubmissionsService))
+        private readonly studentSubmissionsService: StudentSubmissionsService,
     ) {
         super(coursesRepository, {
             notFoundCode: "error-user-not-found",
@@ -200,5 +214,124 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
             courseId,
             teacherId,
         );
+    }
+
+    /**
+     * Override getById để trả về thêm thông tin students, teachers và problems
+     */
+    async getById(
+        user: User,
+        id: string,
+        query?: GetByIdQuery<Courses> & any,
+    ): Promise<any> {
+        // Lấy thông tin course cơ bản
+        const course = await super.getById(user, id, query);
+        if (!course) {
+            return null;
+        }
+
+        // Lấy danh sách students với thông tin user
+        const courseStudents =
+            await this.courseStudentsService.findByCourse(id);
+        const studentIds = courseStudents.map((cs) => cs.student_id);
+        let students: any[] = [];
+        if (studentIds.length > 0) {
+            // Lấy tất cả users cùng lúc
+            const studentUsers = await this.userService.getMany(
+                user,
+                { _id: { $in: studentIds } } as any,
+                {},
+            );
+            const userMap = new Map(studentUsers.map((u: any) => [u._id, u]));
+            students = courseStudents.map((cs) => {
+                const studentUser = userMap.get(cs.student_id);
+                return {
+                    _id: cs.student_id,
+                    username: studentUser?.username,
+                    fullname: studentUser?.fullname,
+                    email: studentUser?.email,
+                    join_at: cs.join_at,
+                };
+            });
+        }
+
+        // Lấy danh sách teachers với thông tin user
+        const courseTeachers =
+            await this.coursesRepository.getCourseTeachers(id);
+        const teacherIds = courseTeachers.map((ct) => ct.teacher_id);
+        let teachers: any[] = [];
+        if (teacherIds.length > 0) {
+            // Lấy tất cả users cùng lúc
+            const teacherUsers = await this.userService.getMany(
+                user,
+                { _id: { $in: teacherIds } } as any,
+                {},
+            );
+            const userMap = new Map(teacherUsers.map((u: any) => [u._id, u]));
+            teachers = courseTeachers.map((ct) => {
+                const teacherUser = userMap.get(ct.teacher_id);
+                return {
+                    _id: ct.teacher_id,
+                    username: teacherUser?.username,
+                    fullname: teacherUser?.fullname,
+                    email: teacherUser?.email,
+                    role: ct.role,
+                };
+            });
+        }
+
+        // Lấy danh sách problems với thông tin chi tiết
+        const problems = await this.courseProblemsService.findWithDetails(
+            user,
+            id,
+            false, // không bao gồm bài ẩn
+        );
+
+        const totalProblems = problems.length;
+        const problemIds = problems.map((p: any) => p.problem_id);
+
+        // Tính số bài đã hoàn thành cho mỗi student
+        const studentsWithProgress = await Promise.all(
+            students.map(async (student) => {
+                if (!problemIds.length) {
+                    return {
+                        ...student,
+                        completed_problems: 0,
+                        total_problems: 0,
+                    };
+                }
+
+                // Lấy tất cả submissions ACCEPTED của student cho các problems trong course
+                const acceptedSubmissions =
+                    await this.studentSubmissionsService.getMany(
+                        user,
+                        {
+                            student_id: student._id,
+                            problem_id: { $in: problemIds } as any,
+                            status: SubmissionStatus.ACCEPTED,
+                        } as any,
+                        {},
+                    );
+
+                // Đếm số bài unique đã hoàn thành (mỗi problem chỉ tính 1 lần)
+                const completedProblemIds = new Set(
+                    acceptedSubmissions.map((s: any) => s.problem_id),
+                );
+                const completedProblems = completedProblemIds.size;
+
+                return {
+                    ...student,
+                    completed_problems: completedProblems,
+                    total_problems: totalProblems,
+                };
+            }),
+        );
+
+        return {
+            ...course,
+            students: studentsWithProgress,
+            teachers,
+            problems,
+        };
     }
 }
