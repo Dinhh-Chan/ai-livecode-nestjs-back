@@ -18,13 +18,13 @@ export class CourseStudentsSqlRepository
 
     findByCourse(courseId: string): Promise<CourseStudents[]> {
         return this.getMany({ course_id: courseId } as any, {
-            sort: { enrolled_at: 1 },
+            sort: { join_at: 1 },
         });
     }
 
     findByStudent(studentId: string): Promise<CourseStudents[]> {
         return this.getMany({ student_id: studentId } as any, {
-            sort: { enrolled_at: 1 },
+            sort: { join_at: 1 },
         });
     }
 }
