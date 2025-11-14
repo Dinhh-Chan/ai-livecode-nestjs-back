@@ -386,11 +386,18 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
+        // Loại bỏ limit nếu không được truyền vào để trả về tất cả problems
+        const queryWithoutLimit = { ...query };
+        if (!query.limit) {
+            delete queryWithoutLimit.limit;
+            delete queryWithoutLimit.page;
+            delete queryWithoutLimit.skip;
+        }
         const pageResult = await this.problemsService.getPage(
             user,
             conditions,
             {
-                ...query,
+                ...queryWithoutLimit,
                 population,
             },
         );
