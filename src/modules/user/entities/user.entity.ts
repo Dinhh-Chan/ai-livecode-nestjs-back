@@ -90,5 +90,10 @@ export class User implements BaseEntity {
     })
     studentPtitCode?: string;
 
+    @IsString()
+    @IsOptional()
+    @EntityDefinition.field({ label: "Avatar URL" })
+    avatarUrl?: string;
+
     dataPartitionCode?: string;
 }

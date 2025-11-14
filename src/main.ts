@@ -16,6 +16,7 @@ import { json, urlencoded } from "body-parser";
 import { I18nMiddleware } from "nestjs-i18n";
 import "reflect-metadata";
 import * as path from "path";
+import * as express from "express";
 import { AppModule } from "./app.module";
 
 async function bootstrap() {
@@ -175,6 +176,10 @@ async function bootstrap() {
     app.useStaticAssets(path.join(process.cwd(), "public"), {
         prefix: "/public",
     });
+    app.use(
+        "/avatar_user",
+        express.static(path.join(process.cwd(), "public", "avatar_user")),
+    );
 
     const protoConfig = getServerGrpcConfig();
 

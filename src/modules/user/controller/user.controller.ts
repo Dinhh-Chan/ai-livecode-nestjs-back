@@ -2,10 +2,26 @@ import { RequestAuthData } from "@common/constant/class/request-auth-data";
 import { ApiRecordResponse } from "@common/decorator/api.decorator";
 import { AllowSystemRoles, ReqUser } from "@common/decorator/auth.decorator";
 import { BaseControllerFactory } from "@config/controller/base-controller-factory";
-import { Body, Controller, Get, Put, Req, Param, Query } from "@nestjs/common";
+import {
+    BadRequestException,
+    Body,
+    Controller,
+    Get,
+    Param,
+    Put,
+    Query,
+    Req,
+    UploadedFiles,
+    UseInterceptors,
+    UsePipes,
+} from "@nestjs/common";
 
-import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { Request } from "express";
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { Request, Express } from "express";
+import { FileFieldsInterceptor } from "@nestjs/platform-express";
+import { diskStorage } from "multer";
+import { existsSync, mkdirSync } from "fs";
+import { extname, join } from "path";
 import { SystemRole } from "../common/constant";
 import { ChangePasswordDto } from "../dto/change-password.dto";
 import { UpdatePasswordByIdDto } from "../dto/update-password-by-id.dto";
@@ -15,6 +31,19 @@ import { UserProfileDto } from "../dto/user-profile.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
 import { GetManyQuery, GetPageQuery, OperatorType } from "@common/constant";
+import { UpdateUserDto } from "../dto/update-user.dto";
+import { AbstractValidationPipe } from "@common/pipe/abstract-validation.pipe";
+
+const avatarUploadDir = join(process.cwd(), "public", "avatar_user");
+const ensureAvatarDir = () => {
+    if (!existsSync(avatarUploadDir)) {
+        mkdirSync(avatarUploadDir, { recursive: true });
+    }
+};
+const updateUserValidationPipe = new AbstractValidationPipe(
+    { whitelist: true },
+    { body: UpdateUserDto },
+);
 
 @Controller("user")
 @ApiTags("user")
@@ -22,7 +51,7 @@ export class UserController extends BaseControllerFactory<User>(
     User,
     null,
     null,
-    null,
+    UpdateUserDto,
     {
         import: {
             enable: false,
@@ -39,6 +68,9 @@ export class UserController extends BaseControllerFactory<User>(
                     response: { description: "Created User data" },
                 },
             },
+            updateById: {
+                enable: false,
+            },
         },
         dataPartition: {
             enable: true,
@@ -47,6 +79,87 @@ export class UserController extends BaseControllerFactory<User>(
 ) {
     constructor(private readonly userService: UserService) {
         super(userService);
+    }
+
+    @Put(":id")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiRecordResponse(User)
+    @ApiOperation({
+        summary: "Cập nhật user (hỗ trợ upload avatar)",
+        description:
+            "Nhận multipart/form-data với field avatar là file ảnh. Ảnh được lưu vào thư mục public/avatar_user và đường dẫn được lưu vào avatarUrl.",
+    })
+    @ApiConsumes("multipart/form-data")
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                avatar: {
+                    type: "string",
+                    format: "binary",
+                    description:
+                        "Ảnh đại diện (field avatar hoặc file hoặc image đều được)",
+                },
+                avatarUrl: {
+                    type: "string",
+                    description: "Đường dẫn avatar (sẽ được cập nhật tự động)",
+                },
+            },
+        },
+    })
+    @UsePipes(updateUserValidationPipe)
+    @UseInterceptors(
+        FileFieldsInterceptor(
+            [
+                { name: "avatar", maxCount: 1 },
+                { name: "file", maxCount: 1 },
+                { name: "image", maxCount: 1 },
+            ],
+            {
+                storage: diskStorage({
+                    destination: (_req, _file, cb) => {
+                        ensureAvatarDir();
+                        cb(null, avatarUploadDir);
+                    },
+                    filename: (req, file, cb) => {
+                        const fileExt = extname(file.originalname) || "";
+                        const safeExt = fileExt || ".png";
+                        const filename = `${req.params?.id || "user"}-${Date.now()}${safeExt}`;
+                        cb(null, filename);
+                    },
+                }),
+                fileFilter: (_req, file, cb) => {
+                    if (!file.mimetype?.startsWith("image/")) {
+                        return cb(
+                            new BadRequestException(
+                                "Avatar tải lên phải là hình ảnh",
+                            ),
+                            false,
+                        );
+                    }
+                    cb(null, true);
+                },
+                limits: { fileSize: 5 * 1024 * 1024 },
+            },
+        ),
+    )
+    async updateUserById(
+        @ReqUser() user: User,
+        @Param("id") id: string,
+        @Body() dto: UpdateUserDto,
+        @UploadedFiles()
+        files?: {
+            avatar?: Express.Multer.File[];
+            file?: Express.Multer.File[];
+            image?: Express.Multer.File[];
+        },
+    ) {
+        const uploadedAvatar =
+            files?.avatar?.[0] || files?.file?.[0] || files?.image?.[0];
+        if (uploadedAvatar) {
+            dto.avatarUrl = `/avatar_user/${uploadedAvatar.filename}`;
+        }
+        return this.userService.updateById(user, id, dto);
     }
 
     @Get("me")

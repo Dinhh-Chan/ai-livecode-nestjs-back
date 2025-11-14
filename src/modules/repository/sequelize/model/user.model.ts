@@ -104,6 +104,13 @@ export class UserModel extends Model implements User {
     studentPtitCode?: string;
 
     @Column({
+        type: DataType.STRING(500),
+        allowNull: true,
+        field: "avatar_url",
+    })
+    avatarUrl?: string;
+
+    @Column({
         type: DataType.STRING(50),
         allowNull: true,
         field: "data_partition_code",

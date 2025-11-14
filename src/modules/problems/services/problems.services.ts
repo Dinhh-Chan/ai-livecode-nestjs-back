@@ -191,6 +191,14 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
     }
 
     /**
+     * Đếm số lượng problems theo topic_id
+     */
+    async countProblemsByTopic(user: User, topicId: string): Promise<number> {
+        const conditions = { topic_id: topicId };
+        return this.problemsRepository.count(conditions);
+    }
+
+    /**
      * Ghi đè deleteById để xóa UserProblemProgress liên quan trước khi xóa problem
      */
     async deleteById(user: User, id: string, query?: any): Promise<Problems> {

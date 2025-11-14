@@ -690,4 +690,113 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
             population,
         });
     }
+
+    @Get("by-topic/:topicId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary: "Lấy danh sách problems theo topic_id có phân trang",
+        description:
+            "API để lấy danh sách problems thuộc về một topic cụ thể với phân trang và problems_count",
+    })
+    @ApiParam({
+        name: "topicId",
+        description: "ID của topic",
+        type: String,
+    })
+    @ApiQuery({
+        name: "page",
+        required: false,
+        description: "Số trang (bắt đầu từ 1)",
+        type: Number,
+        example: 1,
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng problems trên mỗi trang",
+        type: Number,
+        example: 10,
+    })
+    @ApiQuery({
+        name: "sort",
+        required: false,
+        description: "Trường để sắp xếp",
+        enum: [
+            "name",
+            "difficulty",
+            "created_at",
+            "updated_at",
+            "time_limit_ms",
+            "memory_limit_mb",
+        ],
+        example: "difficulty",
+    })
+    @ApiQuery({
+        name: "order",
+        required: false,
+        description: "Thứ tự sắp xếp (asc/desc). Mặc định là asc",
+        enum: ["asc", "desc"],
+        example: "asc",
+    })
+    @ApiQuery({
+        name: "difficulty",
+        required: false,
+        description: "Lọc theo độ khó (1-5)",
+        example: 2,
+    })
+    @ApiQuery({
+        name: "is_public",
+        required: false,
+        description: "Lọc theo trạng thái công khai (true/false)",
+        example: true,
+    })
+    @ApiListResponse(Problems)
+    @ApiCondition()
+    @ApiGet()
+    async getProblemsByTopic(
+        @ReqUser() user: User,
+        @Param("topicId") topicId: string,
+        @RequestQuery() query: GetPageQuery<Problems>,
+    ) {
+        // Nếu user là STUDENT, chỉ trả về problems có is_public = true
+        const conditions: any = { topic_id: topicId };
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions.is_public = true;
+        }
+
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+
+        // Lấy problems với phân trang
+        const pageResult = await this.problemsService.getPage(
+            user,
+            conditions,
+            {
+                ...query,
+                population,
+            },
+        );
+
+        // Đếm tổng số problems trong topic với cùng điều kiện filter
+        // Sử dụng total từ pageResult thay vì gọi count riêng để đảm bảo cùng điều kiện
+        const problemsCount = pageResult.total;
+
+        // Trả về kết quả với problems_count
+        return {
+            ...pageResult,
+            problems_count: problemsCount,
+        };
+    }
 }
