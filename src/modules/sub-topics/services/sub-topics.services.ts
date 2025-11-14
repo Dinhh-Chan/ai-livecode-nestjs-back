@@ -35,6 +35,7 @@ export class SubTopicsService extends BaseService<
 
     /**
      * Lấy sub-topics theo topic ID, chỉ giữ các sub-topic có ít nhất 1 problem
+     * Và thêm problems_count vào mỗi sub-topic
      */
     async getByTopicIdHasProblems(
         user: User,
@@ -48,19 +49,25 @@ export class SubTopicsService extends BaseService<
         );
         if (!subTopics?.length) return [];
 
-        const results: SubTopics[] = [];
+        // Lấy danh sách sub-topic IDs
+        const subTopicIds = subTopics.map((st) => st._id);
+
+        // Đếm problems cho mỗi sub-topic
+        const problemCounts =
+            await this.problemsService.countProblemsBySubTopics(
+                user,
+                subTopicIds,
+            );
+
+        // Lọc và thêm problems_count vào mỗi sub-topic
+        const results: any[] = [];
         for (const st of subTopics) {
-            try {
-                const count =
-                    await this.problemsService.countProblemsBySubTopic(
-                        user,
-                        st._id,
-                    );
-                if (count > 0) {
-                    results.push(st);
-                }
-            } catch (_) {
-                // skip on error
+            const count = problemCounts[st._id] || 0;
+            if (count > 0) {
+                results.push({
+                    ...st,
+                    problems_count: count,
+                });
             }
         }
         return results;
