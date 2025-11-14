@@ -386,10 +386,16 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getPage(user, conditions, {
-            ...query,
-            population,
-        });
+        const pageResult = await this.problemsService.getPage(
+            user,
+            conditions,
+            {
+                ...query,
+                population,
+            },
+        );
+        // Trả về mảng problems trực tiếp thay vì wrapper PageableDto
+        return pageResult.result;
     }
 
     @Get("by-sub-topic/:subTopicId/without-testcases")
