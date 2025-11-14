@@ -6,6 +6,7 @@ import { UserProblemProgressRepository } from "./user-problem-progress-repositor
 import { UserProblemProgress } from "../entities/user-problem-progress.entity";
 import { UserProblemProgressModel } from "../models/user-problem-progress.model";
 import { ModelCtor } from "sequelize-typescript";
+import { ProblemsModel } from "../../problems/models/problems.models";
 
 @Injectable()
 export class UserProblemProgressRepositorySql
@@ -146,6 +147,28 @@ export class UserProblemProgressRepositorySql
                 {
                     model: this.sequelize.models.ProblemsModel,
                     as: "problem",
+                },
+            ],
+        });
+    }
+
+    async countSolvedBySubTopic(
+        userId: string,
+        subTopicId: string,
+    ): Promise<number> {
+        return this.userProblemProgressModel.count({
+            where: {
+                user_id: userId,
+                is_solved: true,
+            },
+            include: [
+                {
+                    model: ProblemsModel,
+                    as: "problem",
+                    required: true,
+                    where: {
+                        sub_topic_id: subTopicId,
+                    },
                 },
             ],
         });

@@ -1,6 +1,7 @@
 import { RequestAuthData } from "@common/constant/class/request-auth-data";
 import { DataPartitionGuard } from "@common/guard/data-partition.guard";
 import { JwtAuthGuard } from "@common/guard/jwt-auth.guard";
+import { JwtSsoGuard } from "@common/guard/jwt-sso.guard";
 import { SystemRoleGuard } from "@common/guard/system-role.guard";
 import { ApiError } from "@config/exception/api-error";
 import { AccessSsoJwtPayload } from "@module/auth/auth.interface";
@@ -32,8 +33,8 @@ export const RequireDataPartition = (value: boolean) =>
 export const Authorization = () =>
     applyDecorators(
         UseGuards(
-            JwtAuthGuard,
-            // JwtSsoGuard,
+            JwtSsoGuard, // Chạy trước để kiểm tra Keycloak token
+            JwtAuthGuard, // Xử lý token từ backend nếu JwtSsoGuard bỏ qua
             SystemRoleGuard,
             DataPartitionGuard,
         ),

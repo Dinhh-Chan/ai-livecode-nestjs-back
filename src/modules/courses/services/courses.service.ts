@@ -217,7 +217,7 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
     }
 
     /**
-     * Override getById để trả về thêm thông tin students, teachers và problems
+     * Override getById để trả về thêm thông tin students và problems
      */
     async getById(
         user: User,
@@ -234,6 +234,10 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
         const courseStudents =
             await this.courseStudentsService.findByCourse(id);
         const studentIds = courseStudents.map((cs) => cs.student_id);
+
+        // Kiểm tra user hiện tại đã join course chưa
+        const isJoined = studentIds.includes(user._id);
+
         let students: any[] = [];
         if (studentIds.length > 0) {
             // Lấy tất cả users cùng lúc
@@ -255,7 +259,7 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
             });
         }
 
-        // Lấy danh sách problems với thông tin chi tiết
+        // Lấy danh sách problems với thông tin chi tiết (đã sắp xếp theo order_index)
         const problems = await this.courseProblemsService.findWithDetails(
             user,
             id,
@@ -304,6 +308,7 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
 
         return {
             ...course,
+            is_joined: isJoined,
             students: studentsWithProgress,
             problems,
         };

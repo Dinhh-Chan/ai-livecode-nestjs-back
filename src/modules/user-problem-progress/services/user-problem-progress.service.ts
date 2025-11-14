@@ -157,6 +157,16 @@ export class UserProblemProgressService extends BaseService<
         );
     }
 
+    async countSolvedProblemsBySubTopic(
+        userId: string,
+        subTopicId: string,
+    ): Promise<number> {
+        return this.userProblemProgressRepository.countSolvedBySubTopic(
+            userId,
+            subTopicId,
+        );
+    }
+
     /**
      * Lấy danh sách bài tập đã thử làm
      */

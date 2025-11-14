@@ -29,13 +29,45 @@ export class SsoService {
     ) {}
 
     async getUser(payload: AccessSsoJwtPayload) {
-        return this.userRepository.getOne({ username: payload.username });
+        // Tìm user theo ssoId trước (nếu đã liên kết)
+        if (payload.sub) {
+            const userBySsoId = await this.userRepository.getOne({
+                ssoId: payload.sub,
+            } as any);
+            if (userBySsoId) {
+                return userBySsoId;
+            }
+        }
+
+        // Tìm theo email
+        if (payload.email) {
+            const userByEmail = await this.userRepository.getOne({
+                email: payload.email,
+            } as any);
+            if (userByEmail) {
+                return userByEmail;
+            }
+        }
+
+        // Tìm theo username
+        if (payload.username) {
+            const userByUsername = await this.userRepository.getOne({
+                username: payload.username,
+            } as any);
+            if (userByUsername) {
+                return userByUsername;
+            }
+        }
+
+        return null;
     }
 
     async initUser(payload: AccessSsoJwtPayload) {
-        let res = await this.getUser(payload);
-        if (!res) {
-            res = await this.userRepository.create({
+        let user = await this.getUser(payload);
+
+        if (!user) {
+            // Tạo user mới nếu chưa tồn tại
+            user = await this.userRepository.create({
                 ssoId: payload.sub,
                 username: payload.username,
                 email: payload.email,
@@ -46,8 +78,38 @@ export class SsoService {
                     .join(" "),
                 systemRole: SystemRole.USER,
             });
+        } else {
+            // User đã tồn tại, cập nhật ssoId và thông tin nếu cần
+            const updateData: any = {};
+
+            // Cập nhật ssoId nếu chưa có
+            if (!user.ssoId && payload.sub) {
+                updateData.ssoId = payload.sub;
+            }
+
+            // Cập nhật thông tin nếu thiếu
+            if (!user.firstname && payload.firstName) {
+                updateData.firstname = payload.firstName;
+            }
+            if (!user.lastname && payload.lastName) {
+                updateData.lastname = payload.lastName;
+            }
+            if (!user.fullname && (payload.firstName || payload.lastName)) {
+                updateData.fullname = [payload.lastName, payload.firstName]
+                    .filter(Boolean)
+                    .join(" ");
+            }
+
+            // Chỉ update nếu có thay đổi
+            if (Object.keys(updateData).length > 0) {
+                user = await this.userRepository.updateById(
+                    user._id,
+                    updateData,
+                );
+            }
         }
-        return res;
+
+        return user;
     }
 
     private async getCerts() {

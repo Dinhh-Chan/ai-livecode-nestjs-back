@@ -103,7 +103,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(user, conditions, {
+        return this.problemsService.getPage(user, conditions, {
             ...query,
             population,
         });
@@ -369,7 +369,7 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
     async getProblemsBySubTopic(
         @ReqUser() user: User,
         @Param("subTopicId") subTopicId: string,
-        @RequestQuery() query: GetManyQuery<Problems>,
+        @RequestQuery() query: GetPageQuery<Problems>,
     ) {
         // Nếu user là STUDENT, chỉ trả về problems có is_public = true
         const conditions: any = { sub_topic_id: subTopicId };
@@ -386,10 +386,99 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        return this.problemsService.getMany(user, conditions, {
+        return this.problemsService.getPage(user, conditions, {
             ...query,
             population,
         });
+    }
+
+    @Get("by-sub-topic/:subTopicId/without-testcases")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary:
+            "Lấy danh sách problems theo sub_topic_id (không bao gồm testcases)",
+        description:
+            "API trả về danh sách problems thuộc sub topic nhưng không kèm testcases để tối ưu kích thước response",
+    })
+    @ApiParam({
+        name: "subTopicId",
+        description: "ID của sub topic",
+        type: String,
+    })
+    @ApiQuery({
+        name: "sort",
+        required: false,
+        description: "Trường để sắp xếp",
+        enum: [
+            "name",
+            "difficulty",
+            "created_at",
+            "updated_at",
+            "time_limit_ms",
+            "memory_limit_mb",
+        ],
+        example: "difficulty",
+    })
+    @ApiQuery({
+        name: "order",
+        required: false,
+        description: "Thứ tự sắp xếp (asc/desc). Mặc định là asc",
+        enum: ["asc", "desc"],
+        example: "asc",
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng records tối đa",
+        example: 10,
+    })
+    @ApiQuery({
+        name: "difficulty",
+        required: false,
+        description: "Lọc theo độ khó (1-5)",
+        example: 2,
+    })
+    @ApiQuery({
+        name: "is_public",
+        required: false,
+        description: "Lọc theo trạng thái công khai (true/false)",
+        example: true,
+    })
+    async getProblemsBySubTopicWithoutTestcases(
+        @ReqUser() user: User,
+        @Param("subTopicId") subTopicId: string,
+        @RequestQuery() query: GetPageQuery<Problems>,
+    ) {
+        const conditions: any = { sub_topic_id: subTopicId };
+        if (user?.systemRole === SystemRole.STUDENT) {
+            conditions.is_public = true;
+        }
+
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+        ];
+        const pageResult = await this.problemsService.getPage(
+            user,
+            conditions,
+            {
+                ...query,
+                population,
+            },
+        );
+        const solved = await this.problemsService.countSolvedProblemsBySubTopic(
+            user,
+            subTopicId,
+        );
+        return {
+            ...pageResult,
+            solved,
+        };
     }
 
     @Get("admin/fix-memory-limits")

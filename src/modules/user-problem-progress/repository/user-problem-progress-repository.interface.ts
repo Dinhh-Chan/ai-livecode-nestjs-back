@@ -32,4 +32,9 @@ export interface UserProblemProgressRepository
         userId: string,
         difficulty?: number,
     ): Promise<UserProblemProgress[]>;
+
+    /**
+     * Đếm số bài đã giải của user theo sub topic
+     */
+    countSolvedBySubTopic(userId: string, subTopicId: string): Promise<number>;
 }

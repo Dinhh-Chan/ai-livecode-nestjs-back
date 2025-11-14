@@ -54,6 +54,19 @@ export class ProblemsService extends BaseService<Problems, ProblemsRepository> {
         return list.map((p: any) => ({ ...p, is_done: solvedSet.has(p._id) }));
     }
 
+    async countSolvedProblemsBySubTopic(
+        user: User,
+        subTopicId: string,
+    ): Promise<number> {
+        if (!user?._id) {
+            return 0;
+        }
+        return this.userProblemProgressService.countSolvedProblemsBySubTopic(
+            user._id,
+            subTopicId,
+        );
+    }
+
     /**
      * Tạo nhiều problems cùng lúc
      */
