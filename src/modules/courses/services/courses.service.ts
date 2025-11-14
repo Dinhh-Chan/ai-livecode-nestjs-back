@@ -17,6 +17,10 @@ import { UserService } from "@module/user/service/user.service";
 import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
 import { GetByIdQuery } from "@common/constant";
+import { ProblemsService } from "@module/problems/services/problems.services";
+import { PopulationDto } from "@common/dto/population.dto";
+import { Problems } from "@module/problems/entities/problems.entity";
+import { SystemRole } from "@module/user/common/constant";
 
 @Injectable()
 export class CoursesService extends BaseService<Courses, CoursesRepository> {
@@ -33,6 +37,8 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
         private readonly userService: UserService,
         @Inject(forwardRef(() => StudentSubmissionsService))
         private readonly studentSubmissionsService: StudentSubmissionsService,
+        @Inject(forwardRef(() => ProblemsService))
+        private readonly problemsService: ProblemsService,
     ) {
         super(coursesRepository, {
             notFoundCode: "error-user-not-found",
@@ -311,6 +317,77 @@ export class CoursesService extends BaseService<Courses, CoursesRepository> {
             is_joined: isJoined,
             students: studentsWithProgress,
             problems,
+        };
+    }
+
+    /**
+     * Lấy thông tin chi tiết một problem trong course
+     */
+    async getProblemInCourse(
+        user: User,
+        courseId: string,
+        problemId: string,
+    ): Promise<any> {
+        // Kiểm tra course có tồn tại không
+        const course = await this.coursesRepository.getById(courseId);
+        if (!course) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Kiểm tra problem có trong course không
+        const courseProblems = await this.courseProblemsService.findByCourse(
+            courseId,
+            true, // include hidden để kiểm tra
+        );
+        const courseProblem = courseProblems.find(
+            (cp) => cp.problem_id === problemId,
+        );
+
+        if (!courseProblem) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Kiểm tra nếu problem không hiển thị và user không phải teacher/admin
+        const courseTeachers =
+            await this.coursesRepository.getCourseTeachers(courseId);
+        const isTeacher = courseTeachers.some((t) => t.teacher_id === user._id);
+        const isAdmin = user.systemRole === SystemRole.ADMIN;
+
+        if (courseProblem.is_visible === false && !isTeacher && !isAdmin) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Lấy thông tin chi tiết của problem với population
+        const population: PopulationDto<Problems>[] = [
+            { path: "topic" },
+            { path: "sub_topic" },
+            {
+                path: "test_cases",
+                condition: { is_public: true },
+                hasMany: true,
+            },
+        ];
+
+        const problem = await this.problemsService.getById(user, problemId, {
+            population,
+        });
+
+        if (!problem) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Nếu user là STUDENT, kiểm tra problem có is_public = true
+        if (user?.systemRole === SystemRole.STUDENT && !problem.is_public) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        // Trả về kết hợp thông tin course-problem và problem
+        return {
+            ...problem,
+            order_index: courseProblem.order_index,
+            is_visible: courseProblem.is_visible,
+            is_required: courseProblem.is_required,
+            course_id: courseId,
         };
     }
 }

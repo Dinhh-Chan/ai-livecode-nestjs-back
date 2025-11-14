@@ -13,6 +13,7 @@ import { CourseStudentsModule } from "@module/course-students/course-students.mo
 import { CourseProblemsModule } from "@module/course-problems/course-problems.module";
 import { UserModule } from "@module/user/user.module";
 import { StudentSubmissionsModule } from "@module/student-submissions/student-submissions.module";
+import { ProblemsModule } from "@module/problems/problems.module";
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import { StudentSubmissionsModule } from "@module/student-submissions/student-su
         forwardRef(() => CourseProblemsModule),
         forwardRef(() => UserModule),
         forwardRef(() => StudentSubmissionsModule),
+        forwardRef(() => ProblemsModule),
     ],
     controllers: [CoursesController],
     providers: [

@@ -254,4 +254,36 @@ export class CoursesController extends BaseControllerFactory<Courses>(
             teacherId,
         );
     }
+
+    @Get(":courseId/problems/:problemId")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+        SystemRole.ADMIN,
+    )
+    @ApiOperation({
+        summary: "Lấy thông tin chi tiết một problem trong course",
+        description:
+            "API trả về thông tin chi tiết của một problem trong course, bao gồm thông tin course-problem (order_index, is_hidden) và thông tin problem đầy đủ",
+    })
+    @ApiResponse({
+        status: 200,
+        description: "Lấy thông tin problem thành công",
+    })
+    @ApiResponse({
+        status: 404,
+        description: "Không tìm thấy course hoặc problem",
+    })
+    async getProblemInCourse(
+        @ReqUser() user: User,
+        @Param("courseId") courseId: string,
+        @Param("problemId") problemId: string,
+    ) {
+        return this.coursesService.getProblemInCourse(
+            user,
+            courseId,
+            problemId,
+        );
+    }
 }
