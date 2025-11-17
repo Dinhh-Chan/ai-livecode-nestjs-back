@@ -162,12 +162,7 @@ export class ContestProblemsService extends BaseService<
     async addMultipleProblems(
         user: User,
         contestId: string,
-        problems: Array<{
-            problem_id: string;
-            order_index?: number;
-            score?: number;
-            is_visible?: boolean;
-        }>,
+        problemIds: string[],
     ): Promise<{
         success: number;
         failed: number;
@@ -197,21 +192,21 @@ export class ContestProblemsService extends BaseService<
                 ? (existingProblems[0] as any).order_index || 0
                 : 0;
 
-        for (const problem of problems) {
+        for (const problemId of problemIds) {
             try {
                 // Kiểm tra xem problem đã có trong contest chưa
                 const existing = await this.getOne(
                     user,
                     {
                         contest_id: contestId,
-                        problem_id: problem.problem_id,
+                        problem_id: problemId,
                     } as any,
                     {},
                 );
 
                 if (existing) {
                     results.push({
-                        problem_id: problem.problem_id,
+                        problem_id: problemId,
                         success: false,
                         message: "Problem đã tồn tại trong contest",
                     });
@@ -220,34 +215,28 @@ export class ContestProblemsService extends BaseService<
                 }
 
                 // Tính order_index - nếu không có thì tự động tăng
-                const orderIndex =
-                    problem.order_index !== undefined
-                        ? problem.order_index
-                        : currentMaxOrderIndex + 1;
+                const orderIndex = currentMaxOrderIndex + 1;
 
                 // Tạo mới
                 await this.create(user, {
                     contest_id: contestId,
-                    problem_id: problem.problem_id,
+                    problem_id: problemId,
                     order_index: orderIndex,
-                    score: problem.score ?? 100,
-                    is_visible: problem.is_visible ?? true,
+                    score: 100,
+                    is_visible: true,
                 } as any);
 
-                // Cập nhật currentMaxOrderIndex nếu order_index được tự động tăng
-                if (problem.order_index === undefined) {
-                    currentMaxOrderIndex = orderIndex;
-                }
+                currentMaxOrderIndex = orderIndex;
 
                 results.push({
-                    problem_id: problem.problem_id,
+                    problem_id: problemId,
                     success: true,
                     message: "Problem đã được thêm vào contest",
                 });
                 successCount++;
             } catch (error: any) {
                 results.push({
-                    problem_id: problem.problem_id,
+                    problem_id: problemId,
                     success: false,
                     message: error.message || "Lỗi không xác định",
                 });
