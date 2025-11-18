@@ -49,7 +49,13 @@ export class MessagesService extends BaseService<Message, MessagesRepository> {
             );
         }
 
-        return this.getMany(user, { session_id: sessionId }, query || {});
+        // Nếu không có sort được chỉ định, mặc định sort theo createdAt giảm dần (mới nhất trước)
+        const finalQuery: GetManyQuery<Message> = {
+            ...query,
+            sort: query?.sort || { createdAt: -1 },
+        };
+
+        return this.getMany(user, { session_id: sessionId }, finalQuery);
     }
 
     /**

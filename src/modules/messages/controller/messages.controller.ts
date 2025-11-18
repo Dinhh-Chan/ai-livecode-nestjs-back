@@ -13,6 +13,7 @@ import { SystemRole } from "@module/user/common/constant";
 import {
     ApiListResponse,
     ApiRecordResponse,
+    ApiGet,
 } from "@common/decorator/api.decorator";
 import {
     RequestQuery,
@@ -59,13 +60,15 @@ export class MessagesController extends BaseControllerFactory<Message>(
     )
     @ApiOperation({
         summary: "Lấy danh sách messages theo session",
-        description: "API để lấy danh sách messages của một session",
+        description:
+            "API để lấy danh sách messages của một session. Có thể sort theo createdAt, updatedAt, v.v. Ví dụ: sort[createdAt]=-1 (mới nhất trước) hoặc sort[createdAt]=1 (cũ nhất trước)",
     })
     @ApiParam({
         name: "sessionId",
         description: "ID của session",
         type: String,
     })
+    @ApiGet({ mode: "many" })
     @ApiListResponse(Message)
     async getBySession(
         @ReqUser() user: User,
