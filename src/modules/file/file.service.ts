@@ -14,6 +14,8 @@ import { SettingService } from "@module/setting/setting.service";
 import { SsoService } from "@module/sso/sso.service";
 import { User } from "@module/user/entities/user.entity";
 import {
+    BadRequestException,
+    ConflictException,
     Injectable,
     Logger,
     NotImplementedException,
@@ -24,15 +26,22 @@ import { NextFunction, Request, Response } from "express";
 import { JWTPayload } from "jose";
 import { PreSignRequestParams } from "minio/dist/main/internal/type";
 import pLimit from "p-limit";
-import { extname } from "path";
+import { promises as fs, existsSync } from "fs";
+import { extname, join } from "path";
 import { v4 } from "uuid";
-import { compressFile, FileScope, FileStorageType } from "./common/constant";
+import {
+    ALLOW_MIME_TYPES,
+    compressFile,
+    FileScope,
+    FileStorageType,
+} from "./common/constant";
 import { ClientCompleteMultipartUploadDto } from "./dto/client-complete-multipart-upload.dto";
 import { ClientInitMultipartUploadResponseDto } from "./dto/client-init-multipart-upload-response.dto";
 import { ClientInitMultipartUploadDto } from "./dto/client-init-multipart-upload.dto";
 import { CreateFileResponseDto } from "./dto/create-file-response.dto";
 import { CreateFileDto } from "./dto/create-file.dto";
 import { File } from "./entities/file.entity";
+import { UploadCosproImageDto } from "./dto/upload-cospro-image.dto";
 
 @Injectable()
 export class FileService implements OnApplicationBootstrap {
@@ -136,6 +145,53 @@ export class FileService implements OnApplicationBootstrap {
         const url = await this.getUrl(resFile);
         resFile.data = undefined;
         return { file: resFile, url };
+    }
+
+    async saveCosproImage(
+        user: User,
+        dto: UploadCosproImageDto,
+        file: Express.Multer.File,
+    ) {
+        if (!file) {
+            throw new BadRequestException("File upload không hợp lệ");
+        }
+
+        const requestedName = dto.filename.trim();
+        if (!requestedName || requestedName.includes("..")) {
+            throw new BadRequestException("Tên file không hợp lệ");
+        }
+
+        const providedExt = extname(requestedName);
+        const hasValidExt = Boolean(providedExt && providedExt.length > 1);
+        const normalizedExt = hasValidExt
+            ? providedExt.toLowerCase()
+            : this.getExtFromFile(file);
+
+        if (!normalizedExt) {
+            throw new BadRequestException("Không xác định được định dạng file");
+        }
+
+        const finalFileName = hasValidExt
+            ? requestedName
+            : `${requestedName}${normalizedExt}`;
+
+        const cosproDir = join(process.cwd(), "public", "cospro");
+        await fs.mkdir(cosproDir, { recursive: true });
+
+        const filePath = join(cosproDir, finalFileName);
+        if (existsSync(filePath)) {
+            throw new ConflictException("Tên file đã tồn tại");
+        }
+
+        await fs.writeFile(filePath, file.buffer);
+
+        return {
+            filename: finalFileName,
+            path: `/cospro/${finalFileName}`,
+            size: file.size,
+            mimetype: file.mimetype,
+            uploadedBy: user._id,
+        };
     }
 
     private async accessFile(id: string, req: Request) {
@@ -387,6 +443,20 @@ export class FileService implements OnApplicationBootstrap {
             await this.transaction.abortTransaction(transaction);
             throw err;
         }
+    }
+
+    private getExtFromFile(file: Express.Multer.File) {
+        const mimeExt = ALLOW_MIME_TYPES.data.find(
+            (item) => item.type === file.mimetype,
+        )?.ext;
+        if (mimeExt) {
+            return `.${mimeExt.replace(/^\./, "")}`;
+        }
+        const originalExt = extname(file.originalname);
+        if (originalExt && originalExt.length > 1) {
+            return originalExt.toLowerCase();
+        }
+        return "";
     }
 
     async clientCompleteMultipartUpload(

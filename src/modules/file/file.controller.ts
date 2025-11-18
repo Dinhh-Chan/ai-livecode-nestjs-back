@@ -10,7 +10,7 @@ import {
     Post,
     UploadedFile,
 } from "@nestjs/common";
-import { ApiBody, ApiConsumes, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { CreateFileResponseDto } from "./dto/create-file-response.dto";
 import { CreateFileDto } from "./dto/create-file.dto";
 import { File } from "./entities/file.entity";
@@ -18,6 +18,7 @@ import { FileService } from "./file.service";
 import { FileUploadTransform } from "./pipe/file-upload-transform.pipe";
 import { ClientInitMultipartUploadDto } from "./dto/client-init-multipart-upload.dto";
 import { ClientCompleteMultipartUploadDto } from "./dto/client-complete-multipart-upload.dto";
+import { UploadCosproImageDto } from "./dto/upload-cospro-image.dto";
 
 @Controller("file")
 @ApiTags("file")
@@ -64,5 +65,37 @@ export class FileController {
     @Post("compress/files")
     async compressFiles() {
         await this.fileService.compressFiles();
+    }
+
+    @Post("cospro/upload")
+    @ApiConsumes("multipart/form-data")
+    @UploadFile()
+    @ApiOperation({
+        summary: "Upload ảnh Cospro",
+        description:
+            "Lưu file ảnh vào thư mục public/cospro với tên do người dùng chỉ định",
+    })
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                filename: {
+                    type: "string",
+                    example: "ketqua-bai1.png",
+                },
+                file: {
+                    type: "string",
+                    format: "binary",
+                },
+            },
+            required: ["filename", "file"],
+        },
+    })
+    async uploadCosproImage(
+        @ReqUser() user: User,
+        @Body() dto: UploadCosproImageDto,
+        @UploadedFile() file: Express.Multer.File,
+    ) {
+        return this.fileService.saveCosproImage(user, dto, file);
     }
 }
