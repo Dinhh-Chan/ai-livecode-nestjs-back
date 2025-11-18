@@ -3,7 +3,7 @@ import { MessagesService } from "../services/messages.service";
 import { Message } from "../entities/messages.entity";
 import { CreateMessageDto } from "../dto/create-message.dto";
 import { UpdateMessageDto } from "../dto/update-message.dto";
-import { Controller, Get, Post, Param, Body } from "@nestjs/common";
+import { Controller, Get, Post, Delete, Param, Body } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiParam } from "@nestjs/swagger";
 import { ConditionMessageDto } from "../dto/condition-message.dto";
 import { GetManyQuery } from "@common/constant";
@@ -92,5 +92,27 @@ export class MessagesController extends BaseControllerFactory<Message>(
             conditions,
             query,
         );
+    }
+
+    @Delete(":id")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary: "Xóa message",
+        description:
+            "API để xóa message. Người dùng chỉ có thể xóa message của chính họ (thông qua session)",
+    })
+    @ApiParam({
+        name: "id",
+        description: "ID của message cần xóa",
+        type: String,
+    })
+    @ApiRecordResponse(Message)
+    async deleteById(@ReqUser() user: User, @Param("id") id: string) {
+        return this.messagesService.deleteById(user, id);
     }
 }

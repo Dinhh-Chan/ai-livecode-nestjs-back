@@ -13,6 +13,7 @@ import { User } from "@module/user/entities/user.entity";
 import { SessionsService } from "@module/sessions/services/sessions.service";
 import { GetManyQuery } from "@common/constant";
 import { SystemRole } from "@module/user/common/constant";
+import { ApiError } from "@config/exception/api-error";
 
 @Injectable()
 export class MessagesService extends BaseService<Message, MessagesRepository> {
@@ -84,5 +85,36 @@ export class MessagesService extends BaseService<Message, MessagesRepository> {
             };
         }
         return this.getMany(user, conditions, query || {});
+    }
+
+    /**
+     * Xóa message theo id, chỉ cho phép xóa message của chính user hoặc admin
+     */
+    async deleteById(user: User, id: string) {
+        // Lấy message theo id
+        const message = await this.getById(user, id);
+        if (!message) {
+            throw new BadRequestException("Message not found");
+        }
+
+        // Lấy session của message
+        const session = await this.sessionsService.getById(
+            user,
+            message.session_id,
+        );
+        if (!session) {
+            throw new BadRequestException("Session not found");
+        }
+
+        // Kiểm tra quyền: chỉ cho phép xóa nếu user là chủ sở hữu session hoặc là admin
+        if (
+            user.systemRole !== SystemRole.ADMIN &&
+            session.user_id !== user._id
+        ) {
+            throw ApiError.Forbidden("error-forbidden");
+        }
+
+        // Xóa message
+        return super.deleteById(user, id);
     }
 }
