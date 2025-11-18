@@ -35,6 +35,7 @@ import {
     ApiCondition,
     ApiGet,
     ApiListResponse,
+    ApiPageResponse,
     ApiRecordResponse,
 } from "@common/decorator/api.decorator";
 import { BaseRouteSetup } from "@config/controller/base-controller.decorator";
@@ -319,13 +320,28 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         SystemRole.TEACHER,
     )
     @ApiOperation({
-        summary: "Lấy danh sách problems theo sub_topic_id",
-        description: "API để lấy tất cả problems thuộc về một sub topic cụ thể",
+        summary: "Lấy danh sách problems theo sub_topic_id có phân trang",
+        description:
+            "API để lấy danh sách problems thuộc về một sub topic cụ thể với phân trang. Hỗ trợ sort, filter theo difficulty và is_public",
     })
     @ApiParam({
         name: "subTopicId",
         description: "ID của sub topic",
         type: String,
+    })
+    @ApiQuery({
+        name: "page",
+        required: false,
+        description: "Số trang (bắt đầu từ 1)",
+        type: Number,
+        example: 1,
+    })
+    @ApiQuery({
+        name: "limit",
+        required: false,
+        description: "Số lượng problems trên mỗi trang",
+        type: Number,
+        example: 10,
     })
     @ApiQuery({
         name: "sort",
@@ -334,38 +350,29 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
         enum: [
             "name",
             "difficulty",
-            "created_at",
-            "updated_at",
+            "createdAt",
+            "updatedAt",
             "time_limit_ms",
             "memory_limit_mb",
         ],
         example: "difficulty",
     })
     @ApiQuery({
-        name: "order",
-        required: false,
-        description: "Thứ tự sắp xếp (asc/desc). Mặc định là asc",
-        enum: ["asc", "desc"],
-        example: "asc",
-    })
-    @ApiQuery({
-        name: "limit",
-        required: false,
-        description: "Số lượng records tối đa",
-        example: 10,
-    })
-    @ApiQuery({
         name: "difficulty",
         required: false,
         description: "Lọc theo độ khó (1-5)",
+        type: Number,
         example: 2,
     })
     @ApiQuery({
         name: "is_public",
         required: false,
         description: "Lọc theo trạng thái công khai (true/false)",
+        type: Boolean,
         example: true,
     })
+    @ApiListResponse(Problems)
+    @ApiGet()
     async getProblemsBySubTopic(
         @ReqUser() user: User,
         @Param("subTopicId") subTopicId: string,
@@ -386,22 +393,18 @@ export class ProblemsController extends BaseControllerFactory<Problems>(
                 hasMany: true,
             },
         ];
-        // Loại bỏ limit nếu không được truyền vào để trả về tất cả problems
-        const queryWithoutLimit = { ...query };
-        if (!query.limit) {
-            delete queryWithoutLimit.limit;
-            delete queryWithoutLimit.page;
-            delete queryWithoutLimit.skip;
-        }
+
+        // Sử dụng getPage để có phân trang, nhưng trả về array để giữ format cũ
         const pageResult = await this.problemsService.getPage(
             user,
             conditions,
             {
-                ...queryWithoutLimit,
+                ...query,
                 population,
             },
         );
-        // Trả về mảng problems trực tiếp thay vì wrapper PageableDto
+
+        // Trả về array để giữ format response cũ: { success: true, data: [...] }
         return pageResult.result;
     }
 

@@ -1,0 +1,9 @@
+---
+alwaysApply: true
+Luôn luôn trả về data theo định dạng base 
+{
+  "data": [],
+  "success": true
+}
+bên trong data là các thông tin cần trả về , không có thêm 1 lớp wrapper nào nữa trong data
+---
