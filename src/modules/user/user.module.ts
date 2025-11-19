@@ -5,6 +5,7 @@ import { SqlTransaction } from "@module/repository/sequelize/sql.transaction";
 import { StudentSubmissionsModule } from "@module/student-submissions/student-submissions.module";
 import { ProblemsModule } from "@module/problems/problems.module";
 import { UserProblemProgressModule } from "@module/user-problem-progress/user-problem-progress.module";
+import { TopicsModule } from "@module/topics/topics.module";
 import { Module, forwardRef } from "@nestjs/common";
 import { UserImportController } from "./controller/user-import.controller";
 import { UserController } from "./controller/user.controller";
@@ -18,6 +19,7 @@ import { AdminInitService } from "./services/admin-init.service";
         forwardRef(() => StudentSubmissionsModule),
         forwardRef(() => ProblemsModule),
         forwardRef(() => UserProblemProgressModule),
+        forwardRef(() => TopicsModule),
     ],
     controllers: [UserController, UserImportController],
     providers: [

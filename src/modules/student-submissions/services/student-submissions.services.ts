@@ -1485,6 +1485,24 @@ export class StudentSubmissionsService extends BaseService<
                           memory_limit_mb: problem.memory_limit_mb,
                           number_of_tests: problem.number_of_tests,
                           is_multipleChoiceForm: problem.is_multipleChoiceForm,
+                          topic_id: problem.topic_id,
+                          sub_topic_id: problem.sub_topic_id,
+                          topic: problem.topic
+                              ? {
+                                    _id: problem.topic._id,
+                                    name: problem.topic.name,
+                                    topic_name:
+                                        problem.topic.topic_name ||
+                                        problem.topic.name,
+                                }
+                              : undefined,
+                          sub_topic: problem.sub_topic
+                              ? {
+                                    _id: problem.sub_topic._id,
+                                    sub_topic_name:
+                                        problem.sub_topic.sub_topic_name,
+                                }
+                              : undefined,
                       }
                     : undefined,
                 student: student

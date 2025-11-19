@@ -28,6 +28,7 @@ import { UpdatePasswordByIdDto } from "../dto/update-password-by-id.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
 import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { UserProfileDto } from "../dto/user-profile.dto";
+import { UserOverviewDto } from "../dto/user-overview.dto";
 import { User } from "../entities/user.entity";
 import { UserService } from "../service/user.service";
 import { GetManyQuery, GetPageQuery, OperatorType } from "@common/constant";
@@ -243,6 +244,38 @@ export class UserController extends BaseControllerFactory<User>(
         const authData = req.user as RequestAuthData;
         const user = await authData.getUser();
         return this.userService.getUserProfile(user);
+    }
+
+    @Get("overview")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiRecordResponse(UserOverviewDto)
+    @ApiOperation({
+        summary: "Tổng quan năng lực user",
+        description:
+            "Trả về thông tin tổng quan theo 3 lớp (số liệu, phân tích chủ đề, phân tích AI) ở định dạng kmark.",
+    })
+    async getUserOverview(@ReqUser() user: User) {
+        return this.userService.getUserOverview(user);
+    }
+
+    @Get(":userId/overview-user")
+    @AllowSystemRoles(SystemRole.ADMIN)
+    @ApiRecordResponse(UserOverviewDto)
+    @ApiOperation({
+        summary: "Tổng quan năng lực user theo ID (admin)",
+        description:
+            "Cho phép admin xem 3 lớp overview của bất kỳ user nào theo ID.",
+    })
+    async getUserOverviewById(
+        @ReqUser() admin: User,
+        @Param("userId") userId: string,
+    ) {
+        return this.userService.getUserOverviewById(admin, userId);
     }
 
     @Get("search-username")

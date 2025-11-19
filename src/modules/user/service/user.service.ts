@@ -14,6 +14,7 @@ import { SubmissionStatus } from "@module/student-submissions/entities/student-s
 import { ProblemsService } from "@module/problems/services/problems.services";
 import { ProblemsCountService } from "@module/problems/services/problems-count.service";
 import { UserProblemProgressService } from "@module/user-problem-progress/services/user-problem-progress.service";
+import { TopicsService } from "@module/topics/services/topics.services";
 import { CreateUserDto } from "@module/user/dto/create-user.dto";
 import { UserRepository } from "@module/user/repository/user-repository.interface";
 import { UserProfileDto } from "../dto/user-profile.dto";
@@ -35,6 +36,14 @@ import { ChangePasswordDto } from "../dto/change-password.dto";
 import { UserStatisticsDto } from "../dto/user-statistics.dto";
 import { SystemStatisticsDto } from "../dto/system-statistics.dto";
 import { User } from "../entities/user.entity";
+import {
+    OverviewLayer1Dto,
+    OverviewLayer2Dto,
+    OverviewLayer3Dto,
+    TopicStatDto,
+    UserOverviewDto,
+} from "../dto/user-overview.dto";
+import axios from "axios";
 
 @Injectable()
 export class UserService
@@ -58,6 +67,8 @@ export class UserService
         private readonly problemsCountService: ProblemsCountService,
         @Inject(forwardRef(() => UserProblemProgressService))
         private readonly userProblemProgressService: UserProblemProgressService,
+        @Inject(forwardRef(() => TopicsService))
+        private readonly topicsService: TopicsService,
     ) {
         super(userRepository, {
             notFoundCode: "error-user-not-found",
@@ -1356,6 +1367,528 @@ export class UserService
             solved: solvedProblems.size,
             total: 699,
             attempting: attemptedProblems.size - solvedProblems.size,
+        };
+    }
+
+    async getUserOverview(user: User): Promise<UserOverviewDto> {
+        return this.buildUserOverview(user, user._id);
+    }
+
+    async getUserOverviewById(
+        requester: User,
+        targetUserId: string,
+    ): Promise<UserOverviewDto> {
+        return this.buildUserOverview(requester, targetUserId);
+    }
+
+    private async buildUserOverview(
+        contextUser: User,
+        targetUserId: string,
+    ): Promise<UserOverviewDto> {
+        const targetUser =
+            contextUser._id === targetUserId
+                ? contextUser
+                : await this.userRepository.getById(targetUserId, {
+                      enableDataPartition: false,
+                  });
+
+        if (!targetUser) {
+            throw ApiError.NotFound("error-user-not-found");
+        }
+
+        const submissions = await this.studentSubmissionsService.getMany(
+            contextUser,
+            { student_id: targetUserId } as any,
+            {
+                limit: 10000,
+                sort: { submitted_at: -1 } as any,
+            } as any,
+        );
+
+        const { overview, topicStats, problemAttempts } =
+            await this.buildOverviewLayers(contextUser, submissions);
+
+        const aiLayer = await this.generateAiOverviewKmark(
+            overview,
+            submissions,
+            topicStats,
+            problemAttempts,
+        );
+
+        overview.layer3 = aiLayer;
+
+        return overview;
+    }
+
+    private async buildOverviewLayers(user: User, submissions: any[]) {
+        const solvedByDifficulty: Record<string, number> = {
+            easy: 0,
+            medium: 0,
+            normal: 0,
+            hard: 0,
+            very_hard: 0,
+        };
+
+        let acceptedCount = 0;
+        const totalSubmissions = submissions.length;
+        let totalTimeToAc = 0;
+        let acWithTime = 0;
+
+        const topicMap = new Map<
+            string,
+            {
+                topicId?: string;
+                topicName: string;
+                attempts: number;
+                solved: number;
+                totalDifficulty: number;
+                totalTimeToAc: number;
+            }
+        >();
+
+        const problemAttempts = new Map<
+            string,
+            {
+                attempts: number;
+                solved: boolean;
+            }
+        >();
+
+        submissions.forEach((submission) => {
+            const problem = submission.problem || {};
+            const difficulty = problem.difficulty || ProblemDifficulty.EASY;
+            const topicInfo = this.resolveTopicInfo(problem);
+            const topicId = topicInfo.topicId
+                ? String(topicInfo.topicId)
+                : "unknown";
+            const topicName = topicInfo.topicName;
+
+            let topicStat = topicMap.get(topicId);
+            if (!topicStat) {
+                topicStat = {
+                    topicId,
+                    topicName,
+                    attempts: 0,
+                    solved: 0,
+                    totalDifficulty: 0,
+                    totalTimeToAc: 0,
+                };
+                topicMap.set(topicId, topicStat);
+            }
+
+            topicStat.attempts++;
+            topicStat.totalDifficulty += difficulty || 1;
+
+            const problemStat = problemAttempts.get(submission.problem_id) || {
+                attempts: 0,
+                solved: false,
+            };
+            problemStat.attempts++;
+
+            if (submission.status === SubmissionStatus.ACCEPTED) {
+                acceptedCount++;
+                topicStat.solved++;
+                problemStat.solved = true;
+
+                if (submission.submitted_at && submission.judged_at) {
+                    const delta =
+                        new Date(submission.judged_at).getTime() -
+                        new Date(submission.submitted_at).getTime();
+                    if (!Number.isNaN(delta) && delta > 0) {
+                        totalTimeToAc += delta;
+                        acWithTime++;
+                        topicStat.totalTimeToAc += delta;
+                    }
+                }
+
+                switch (difficulty) {
+                    case ProblemDifficulty.MEDIUM:
+                    case 2:
+                        solvedByDifficulty.medium++;
+                        break;
+                    case ProblemDifficulty.NORMAL:
+                    case 3:
+                        solvedByDifficulty.normal++;
+                        break;
+                    case ProblemDifficulty.HARD:
+                    case 4:
+                        solvedByDifficulty.hard++;
+                        break;
+                    case ProblemDifficulty.VERY_HARD:
+                    case 5:
+                        solvedByDifficulty.very_hard++;
+                        break;
+                    case ProblemDifficulty.EASY:
+                    case 1:
+                    default:
+                        solvedByDifficulty.easy++;
+                        break;
+                }
+            }
+
+            problemAttempts.set(submission.problem_id, problemStat);
+        });
+
+        await this.populateTopicNames(user, topicMap);
+
+        const topicStats: TopicStatDto[] = Array.from(topicMap.values()).map(
+            (item) => ({
+                topicId: item.topicId,
+                topicName: item.topicName,
+                attempts: item.attempts,
+                solved: item.solved,
+                accuracy:
+                    item.attempts > 0
+                        ? Number(
+                              ((item.solved / item.attempts) * 100).toFixed(2),
+                          )
+                        : 0,
+                averageDifficulty:
+                    item.attempts > 0
+                        ? Number(
+                              (item.totalDifficulty / item.attempts).toFixed(2),
+                          )
+                        : 0,
+                averageTimeToAcMs:
+                    item.solved > 0
+                        ? Math.round(item.totalTimeToAc / item.solved)
+                        : null,
+            }),
+        );
+
+        const topTopics = [...topicStats]
+            .sort(
+                (a, b) =>
+                    b.solved - a.solved ||
+                    b.accuracy - a.accuracy ||
+                    b.attempts - a.attempts,
+            )
+            .slice(0, 3);
+
+        const lowTopics = topicStats
+            .filter((t) => t.attempts >= 2)
+            .sort((a, b) => a.accuracy - b.accuracy)
+            .slice(0, 3);
+
+        const focusTopics = topicStats
+            .filter((t) => t.accuracy >= 35 && t.accuracy <= 70)
+            .sort((a, b) => a.accuracy - b.accuracy)
+            .slice(0, 3);
+
+        const layer1: OverviewLayer1Dto = {
+            solvedByDifficulty,
+            accuracy:
+                totalSubmissions > 0
+                    ? Number(
+                          ((acceptedCount / totalSubmissions) * 100).toFixed(2),
+                      )
+                    : 0,
+            averageTimeToAcMs:
+                acWithTime > 0 ? Math.round(totalTimeToAc / acWithTime) : null,
+            averageSubmissionsPerProblem:
+                problemAttempts.size > 0
+                    ? Number(
+                          (totalSubmissions / problemAttempts.size).toFixed(2),
+                      )
+                    : totalSubmissions,
+            topTopics,
+            lowTopics,
+        };
+
+        const layer2: OverviewLayer2Dto = {
+            strengthTopics: topTopics,
+            weakTopics: lowTopics,
+            focusTopics,
+            summaryKmark: this.buildLayer2Kmark(
+                topTopics,
+                lowTopics,
+                focusTopics,
+            ),
+        };
+
+        const layer3: OverviewLayer3Dto = {
+            aiKmark:
+                "## Phân tích AI\n- Đang tổng hợp dữ liệu, vui lòng đợi trong giây lát.",
+            usedModel: undefined,
+        };
+
+        return {
+            overview: {
+                layer1,
+                layer2,
+                layer3,
+            },
+            topicStats,
+            problemAttempts,
+        };
+    }
+
+    private async populateTopicNames(
+        user: User,
+        topicMap: Map<
+            string,
+            {
+                topicId?: string;
+                topicName: string;
+                attempts: number;
+                solved: number;
+                totalDifficulty: number;
+                totalTimeToAc: number;
+            }
+        >,
+    ) {
+        // Chỉ populate cho các topic có tên là "Topic không tên", "Sub-topic không tên" hoặc "Chưa có chủ đề"
+        const needsPopulate = Array.from(topicMap.entries()).filter(
+            ([id, stat]) =>
+                id &&
+                id !== "unknown" &&
+                (stat.topicName === "Topic không tên" ||
+                    stat.topicName === "Sub-topic không tên"),
+        );
+
+        if (needsPopulate.length === 0) {
+            return;
+        }
+
+        const uniqueIds = Array.from(new Set(needsPopulate.map(([id]) => id)));
+        try {
+            const topics = await this.topicsService.getMany(
+                user,
+                { _id: { $in: uniqueIds } } as any,
+                {
+                    select: { topic_name: 1, _id: 1 },
+                    enableDataPartition: false,
+                    limit: uniqueIds.length,
+                } as any,
+            );
+
+            const topicNameMap = new Map(
+                topics
+                    .filter((topic: any) => topic?._id && topic?.topic_name)
+                    .map((topic: any) => [topic._id, topic.topic_name]),
+            );
+
+            needsPopulate.forEach(([id, stat]) => {
+                const resolvedName = topicNameMap.get(id);
+                if (resolvedName) {
+                    stat.topicName = resolvedName;
+                }
+            });
+        } catch (error) {
+            this.logger.warn(
+                `populateTopicNames failed: ${(error as Error)?.message}`,
+            );
+        }
+    }
+
+    private buildLayer2Kmark(
+        strengths: TopicStatDto[],
+        weaknesses: TopicStatDto[],
+        focus: TopicStatDto[],
+    ): string {
+        const sections: string[] = ["# Phân tích theo chủ đề"];
+
+        sections.push("## Chủ đề mạnh");
+        if (strengths.length === 0) {
+            sections.push("- Chưa có đủ dữ liệu.");
+        } else {
+            strengths.forEach((topic) =>
+                sections.push(
+                    `- ${topic.topicName}: ${topic.solved}/${topic.attempts} bài (${topic.accuracy}%), độ khó TB ${topic.averageDifficulty}`,
+                ),
+            );
+        }
+
+        sections.push("## Chủ đề cần cải thiện");
+        if (weaknesses.length === 0) {
+            sections.push("- Không có chủ đề yếu rõ ràng.");
+        } else {
+            weaknesses.forEach((topic) =>
+                sections.push(
+                    `- ${topic.topicName}: chỉ đạt ${topic.accuracy}% sau ${topic.attempts} lần thử.`,
+                ),
+            );
+        }
+
+        sections.push("## Chủ đề nên tập trung");
+        if (focus.length === 0) {
+            sections.push("- Chưa xác định được chủ đề cân bằng.");
+        } else {
+            focus.forEach((topic) =>
+                sections.push(
+                    `- ${topic.topicName}: đang ở mức ${topic.accuracy}% (${topic.solved}/${topic.attempts}), nên luyện thêm.`,
+                ),
+            );
+        }
+
+        return sections.join("\n");
+    }
+
+    private resolveTopicInfo(problem: any) {
+        if (!problem) {
+            return {
+                topicId: "unknown",
+                topicName: "Chưa có chủ đề",
+            };
+        }
+
+        // Ưu tiên lấy từ problem.topic nếu tồn tại
+        if (problem.topic?._id) {
+            const topicName =
+                problem.topic.topic_name ||
+                problem.topic.name ||
+                "Topic không tên";
+            return {
+                topicId: problem.topic._id,
+                topicName,
+            };
+        }
+
+        // Sau đó kiểm tra sub_topic
+        if (problem.sub_topic?._id) {
+            const subTopicName =
+                problem.sub_topic.sub_topic_name ||
+                problem.sub_topic.name ||
+                "Sub-topic không tên";
+            return {
+                topicId: problem.sub_topic._id,
+                topicName: subTopicName,
+            };
+        }
+
+        // Cuối cùng, kiểm tra các field ID và tên trực tiếp
+        if (problem.topic_id) {
+            return {
+                topicId: problem.topic_id,
+                topicName: problem.topic_name || "Topic không tên",
+            };
+        }
+
+        if (problem.sub_topic_id) {
+            return {
+                topicId: problem.sub_topic_id,
+                topicName: problem.sub_topic_name || "Sub-topic không tên",
+            };
+        }
+
+        return {
+            topicId: "unknown",
+            topicName: "Chưa có chủ đề",
+        };
+    }
+
+    private async generateAiOverviewKmark(
+        overview: UserOverviewDto,
+        submissions: any[],
+        topicStats: TopicStatDto[],
+        problemAttempts: Map<
+            string,
+            {
+                attempts: number;
+                solved: boolean;
+            }
+        >,
+    ): Promise<OverviewLayer3Dto> {
+        const apiKey =
+            process.env.OPENAI_KEY ||
+            this.configService.get<string>("openai.key" as any);
+
+        if (!apiKey) {
+            return {
+                aiKmark:
+                    "## Phân tích AI\n- Không thể tạo phân tích vì thiếu OPENAI_KEY trong cấu hình.",
+                usedModel: undefined,
+            };
+        }
+
+        const model = "gpt-4o-mini";
+        const sampleSubmissions = submissions.slice(0, 15).map((submission) => {
+            const topic = this.resolveTopicInfo(submission.problem);
+            return {
+                problem: submission.problem?.name || submission.problem_id,
+                difficulty: submission.problem?.difficulty,
+                topic: topic.topicName,
+                status: submission.status,
+                attempts:
+                    problemAttempts.get(submission.problem_id)?.attempts || 1,
+                runtimeMs: submission.execution_time_ms,
+                memoryMb: submission.memory_used_mb,
+                score: submission.score,
+                codeSnippet: submission.code
+                    ? submission.code.slice(0, 800)
+                    : undefined,
+            };
+        });
+
+        const payload = {
+            layer1: overview.layer1,
+            layer2: overview.layer2,
+            topics: topicStats,
+            samples: sampleSubmissions,
+        };
+
+        const prompt =
+            "You are analyzing a user's entire coding history.\n" +
+            "Given:\n- List of all problems solved with difficulty (1–5)\n" +
+            "- The user's code submissions\n- Tags/topics of problems\n" +
+            "- Number of attempts\n- Runtime and memory\n- Whether code is clean or messy\n\n" +
+            "Analyze and return:\n" +
+            "1. Strong skills (with explanations)\n" +
+            "2. Weak skills (with explanations)\n" +
+            "3. Specific things the user should improve\n" +
+            "4. Code quality issues\n" +
+            "5. Algorithm thinking assessment\n" +
+            "6. Recommended learning path\n" +
+            "7. Recommended problems (based on weak topics)\n\n" +
+            "Trả lời bằng tiếng Việt và dùng định dạng kmark.";
+
+        try {
+            const response = await axios.post(
+                "https://api.openai.com/v1/chat/completions",
+                {
+                    model,
+                    temperature: 0.2,
+                    messages: [
+                        {
+                            role: "system",
+                            content: prompt,
+                        },
+                        {
+                            role: "user",
+                            content: `Dữ liệu thống kê (JSON): ${JSON.stringify(payload)}`,
+                        },
+                    ],
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${apiKey}`,
+                        "Content-Type": "application/json",
+                    },
+                    timeout: 20000,
+                },
+            );
+
+            const content =
+                response.data?.choices?.[0]?.message?.content?.trim();
+
+            if (content) {
+                return {
+                    aiKmark: content,
+                    usedModel: model,
+                };
+            }
+        } catch (error) {
+            this.logger.warn(
+                `AI overview request failed: ${
+                    (error as Error)?.message || "unknown error"
+                }`,
+            );
+        }
+
+        return {
+            aiKmark:
+                "## Phân tích AI\n- Không thể tạo phân tích tự động ở thời điểm hiện tại. Vui lòng thử lại sau.",
+            usedModel: model,
         };
     }
 
