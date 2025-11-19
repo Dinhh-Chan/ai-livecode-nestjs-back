@@ -26,6 +26,18 @@ export class SessionsController extends BaseControllerFactory<Session>(
     ConditionSessionDto,
     CreateSessionDto,
     UpdateSessionDto,
+    {
+        routes: {
+            deleteById: {
+                roles: [
+                    SystemRole.USER,
+                    SystemRole.ADMIN,
+                    SystemRole.STUDENT,
+                    SystemRole.TEACHER,
+                ],
+            },
+        },
+    },
 ) {
     constructor(private readonly sessionsService: SessionsService) {
         super(sessionsService);

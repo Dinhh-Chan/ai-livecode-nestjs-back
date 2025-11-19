@@ -7,6 +7,8 @@ import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
 import { UserService } from "@module/user/service/user.service";
 import { GetManyQuery } from "@common/constant";
+import { ApiError } from "@config/exception/api-error";
+import { SystemRole } from "@module/user/common/constant";
 
 @Injectable()
 export class SessionsService extends BaseService<Session, SessionsRepository> {
@@ -55,5 +57,23 @@ export class SessionsService extends BaseService<Session, SessionsRepository> {
             ...i,
             user_basic: userMap.get(i.user_id) || null,
         }));
+    }
+
+    async deleteById(user: User, id: string) {
+        const session = await this.sessionsRepository.getById(id, {});
+        if (!session) {
+            throw ApiError.NotFound("error-setting-value-invalid", {
+                message: "Không tìm thấy session",
+            });
+        }
+
+        if (
+            user.systemRole !== SystemRole.ADMIN &&
+            session.user_id !== user._id
+        ) {
+            throw ApiError.Forbidden("error-forbidden");
+        }
+
+        return super.deleteById(user, id);
     }
 }
