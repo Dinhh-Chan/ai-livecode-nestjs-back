@@ -10,11 +10,15 @@ import { GetManyQuery } from "@common/constant";
 import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
 import { SystemRole } from "@module/user/common/constant";
-import { ApiListResponse } from "@common/decorator/api.decorator";
+import {
+    ApiListResponse,
+    ApiRecordResponse,
+} from "@common/decorator/api.decorator";
 import {
     RequestQuery,
     RequestCondition,
 } from "@common/decorator/query.decorator";
+import { ClassOverviewDto } from "../dto/class-overview.dto";
 
 @Controller("classes")
 @ApiTags("Classes")
@@ -113,5 +117,25 @@ export class ClassController extends BaseControllerFactory<Class>(
             { teacher_id: teacherId },
             query,
         );
+    }
+
+    @Get(":id/overview")
+    @AllowSystemRoles(SystemRole.USER, SystemRole.ADMIN, SystemRole.TEACHER)
+    @ApiOperation({
+        summary: "Đánh giá overview của lớp học",
+        description:
+            "Trả về thống kê tổng quan của lớp học bao gồm: mức độ trung bình, tỉ lệ hoàn thành, chủ đề mạnh/yếu, top/bottom học sinh, bài khó, và phân tích AI dạng kmark.",
+    })
+    @ApiParam({
+        name: "id",
+        description: "ID của lớp học",
+        type: String,
+    })
+    @ApiRecordResponse(ClassOverviewDto)
+    async getClassOverview(
+        @ReqUser() user: User,
+        @Param("id") classId: string,
+    ): Promise<ClassOverviewDto> {
+        return this.classService.getClassOverview(user, classId);
     }
 }
