@@ -54,6 +54,14 @@ export class CoursesModel extends Model implements Courses {
     is_active: boolean;
 
     @Column({
+        type: DataType.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: "is_public",
+    })
+    is_public?: boolean;
+
+    @Column({
         type: DataType.DATE,
         allowNull: false,
         defaultValue: DataType.NOW,
