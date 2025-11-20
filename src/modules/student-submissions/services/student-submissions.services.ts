@@ -46,28 +46,6 @@ export class StudentSubmissionsService extends BaseService<
     ) {
         super(studentSubmissionsRepository);
     }
-
-    /**
-     * Ghi đè getById để trả về submission với thông tin problem đầy đủ
-     */
-    async getById(user: User, id: string, query?: any): Promise<any> {
-        this.logger.log(`Getting submission by ID: ${id}`);
-        const submission = await this.studentSubmissionsRepository.getById(
-            id,
-            {},
-        );
-        this.logger.log(`Submission found: ${submission ? "yes" : "no"}`);
-        if (!submission) {
-            this.logger.error(`Submission not found with ID: ${id}`);
-            throw ApiError.NotFound("error-setting-value-invalid", {
-                message: "Không tìm thấy submission",
-            });
-        }
-
-        // Làm giàu submission với thông tin user và problem
-        return await this.enrichSubmissionWithDetails(submission, user);
-    }
-
     /**
      * Lấy submissions theo student ID với thông tin user và problem
      */
@@ -1454,6 +1432,15 @@ export class StudentSubmissionsService extends BaseService<
                 }
             }
 
+            // Parse code từ "Answer: 4" thành chỉ số 4 (tương thích với dữ liệu cũ)
+            let parsedCode = submission.code;
+            if (submission.code && submission.code.startsWith("Answer: ")) {
+                const answerMatch = submission.code.match(/Answer: (\d+)/);
+                if (answerMatch) {
+                    parsedCode = answerMatch[1];
+                }
+            }
+
             // Tạo object sạch chỉ với dữ liệu cần thiết
             const cleanSubmission = {
                 _id: submission._id,
@@ -1461,7 +1448,7 @@ export class StudentSubmissionsService extends BaseService<
                 student_id: submission.student_id,
                 class_id: submission.class_id,
                 judge_node_id: submission.judge_node_id,
-                code: submission.code,
+                code: parsedCode,
                 language_id: submission.language_id,
                 status: submission.status,
                 score: submission.score,
@@ -1503,6 +1490,14 @@ export class StudentSubmissionsService extends BaseService<
                                         problem.sub_topic.sub_topic_name,
                                 }
                               : undefined,
+                          // Thêm multipleChoiceForm nếu is_multipleChoiceForm = true
+                          multipleChoiceForm:
+                              problem.is_multipleChoiceForm &&
+                              problem.multipleChoiceForm &&
+                              typeof problem.multipleChoiceForm === "object" &&
+                              !Array.isArray(problem.multipleChoiceForm)
+                                  ? problem.multipleChoiceForm
+                                  : undefined,
                       }
                     : undefined,
                 student: student
@@ -1520,6 +1515,14 @@ export class StudentSubmissionsService extends BaseService<
             return cleanSubmission;
         } catch (error) {
             this.logger.error(`Error enriching submission: ${error.message}`);
+            // Parse code từ "Answer: 4" thành chỉ số 4 (tương thích với dữ liệu cũ)
+            let parsedCode = submission.code;
+            if (submission.code && submission.code.startsWith("Answer: ")) {
+                const answerMatch = submission.code.match(/Answer: (\d+)/);
+                if (answerMatch) {
+                    parsedCode = answerMatch[1];
+                }
+            }
             // Trả về submission gốc nếu có lỗi, nhưng cũng làm sạch
             return {
                 _id: submission._id,
@@ -1527,7 +1530,7 @@ export class StudentSubmissionsService extends BaseService<
                 student_id: submission.student_id,
                 class_id: submission.class_id,
                 judge_node_id: submission.judge_node_id,
-                code: submission.code,
+                code: parsedCode,
                 language_id: submission.language_id,
                 status: submission.status,
                 score: submission.score,
@@ -1612,7 +1615,7 @@ export class StudentSubmissionsService extends BaseService<
                 student_id: user._id,
                 problem_id: dto.problem_id,
                 class_id: dto.class_id,
-                code: `Answer: ${dto.answer}`, // Lưu đáp án dưới dạng code
+                code: String(dto.answer), // Lưu trực tiếp số đáp án
                 language_id: 0, // Không có language cho multiple choice
             });
 
