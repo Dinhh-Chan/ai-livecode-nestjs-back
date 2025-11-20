@@ -165,6 +165,29 @@ export class StudentSubmissionsService extends BaseService<
     }
 
     /**
+     * Ghi đè getById để trả về submission với thông tin problem đầy đủ (bao gồm multipleChoiceForm)
+     */
+    async getById(user: User, id: string, query?: any): Promise<any> {
+        this.logger.log(`Getting submission by ID: ${id}`);
+
+        // Lấy submission cơ bản
+        const submission = await super.getById(user, id, query);
+
+        if (!submission) {
+            return null;
+        }
+
+        // Làm giàu submission với thông tin user và problem (bao gồm multipleChoiceForm)
+        const enrichedSubmission = await this.enrichSubmissionWithDetails(
+            submission,
+            user,
+        );
+
+        this.logger.log(`Submission ${id} enriched with problem details`);
+        return enrichedSubmission;
+    }
+
+    /**
      * Ghi đè getMany để trả về submissions với thông tin problem đầy đủ
      */
     async getMany(user: User, conditions: any, query: any): Promise<any[]> {
