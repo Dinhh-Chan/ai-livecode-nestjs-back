@@ -1429,6 +1429,14 @@ export class UserService
             very_hard: 0,
         };
 
+        // Set để track các problem_id đã được đếm trong solvedByDifficulty (chỉ đếm unique)
+        const solvedProblemsByDifficulty = new Map<string, Set<string>>();
+        solvedProblemsByDifficulty.set("easy", new Set());
+        solvedProblemsByDifficulty.set("medium", new Set());
+        solvedProblemsByDifficulty.set("normal", new Set());
+        solvedProblemsByDifficulty.set("hard", new Set());
+        solvedProblemsByDifficulty.set("very_hard", new Set());
+
         let acceptedCount = 0;
         const totalSubmissions = submissions.length;
         let totalTimeToAc = 0;
@@ -1487,7 +1495,11 @@ export class UserService
 
             if (submission.status === SubmissionStatus.ACCEPTED) {
                 acceptedCount++;
-                topicStat.solved++;
+
+                // Chỉ tăng solved cho topic nếu problem chưa được đếm
+                if (!problemStat.solved) {
+                    topicStat.solved++;
+                }
                 problemStat.solved = true;
 
                 if (submission.submitted_at && submission.judged_at) {
@@ -1501,28 +1513,36 @@ export class UserService
                     }
                 }
 
+                // Chỉ đếm vào solvedByDifficulty nếu problem_id chưa được đếm ở độ khó này
+                let difficultyKey = "easy";
                 switch (difficulty) {
                     case ProblemDifficulty.MEDIUM:
                     case 2:
-                        solvedByDifficulty.medium++;
+                        difficultyKey = "medium";
                         break;
                     case ProblemDifficulty.NORMAL:
                     case 3:
-                        solvedByDifficulty.normal++;
+                        difficultyKey = "normal";
                         break;
                     case ProblemDifficulty.HARD:
                     case 4:
-                        solvedByDifficulty.hard++;
+                        difficultyKey = "hard";
                         break;
                     case ProblemDifficulty.VERY_HARD:
                     case 5:
-                        solvedByDifficulty.very_hard++;
+                        difficultyKey = "very_hard";
                         break;
                     case ProblemDifficulty.EASY:
                     case 1:
                     default:
-                        solvedByDifficulty.easy++;
+                        difficultyKey = "easy";
                         break;
+                }
+
+                const solvedSet = solvedProblemsByDifficulty.get(difficultyKey);
+                if (solvedSet && !solvedSet.has(submission.problem_id)) {
+                    solvedSet.add(submission.problem_id);
+                    solvedByDifficulty[difficultyKey]++;
                 }
             }
 

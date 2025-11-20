@@ -181,6 +181,13 @@ async function bootstrap() {
         express.static(path.join(process.cwd(), "public", "avatar_user")),
     );
 
+    // Serve favicon from image.png
+    const faviconPath = path.join(process.cwd(), "public", "image.png");
+    app.getHttpAdapter().get("/favicon.ico", (req: any, res: any) => {
+        res.setHeader("Content-Type", "image/png");
+        res.sendFile(faviconPath);
+    });
+
     const protoConfig = getServerGrpcConfig();
 
     app.connectMicroservice<GrpcOptions>({

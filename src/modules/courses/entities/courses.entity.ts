@@ -35,6 +35,14 @@ export class Courses implements BaseEntity {
     @EntityDefinition.field({ label: "Trạng thái hoạt động" })
     is_active: boolean;
 
+    /**
+     * Khóa học công khai hay riêng tư
+     */
+    @IsBoolean()
+    @IsOptional()
+    @EntityDefinition.field({ label: "Khóa học công khai" })
+    is_public?: boolean;
+
     createdAt?: Date;
     updatedAt?: Date;
 
