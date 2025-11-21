@@ -1,5 +1,5 @@
 import { BaseService } from "@config/service/base.service";
-import { Contests } from "../entities/contests.entity";
+import { Contests, ContestType } from "../entities/contests.entity";
 import { ContestsRepository } from "../repository/contests-repository.interface";
 import { Injectable, Inject, forwardRef, Logger } from "@nestjs/common";
 import { InjectRepository } from "@module/repository/common/repository";
@@ -985,5 +985,197 @@ export class ContestsService extends BaseService<Contests, ContestsRepository> {
         );
 
         return { data: ranking };
+    }
+
+    /**
+     * Tạo contest với các bài tập được chọn ngẫu nhiên theo cấu hình
+     */
+    async createContestWithRandomProblems(
+        user: User,
+        dto: {
+            contest_name: string;
+            description?: string;
+            start_time: string | Date;
+            end_time: string | Date;
+            duration_minutes?: number;
+            type?: ContestType;
+            problems_config: Array<{
+                difficulty: number;
+                count: number;
+                topic_id?: string;
+                sub_topic_id?: string;
+                problem_type?: string;
+            }>;
+            default_score?: number;
+            is_active?: boolean;
+        },
+    ): Promise<any> {
+        this.logger.log(
+            `Creating contest with random problems: ${dto.contest_name}`,
+        );
+
+        // 1. Tạo contest
+        const contest = await this.create(user, {
+            contest_name: dto.contest_name,
+            description: dto.description,
+            start_time: new Date(dto.start_time),
+            end_time: new Date(dto.end_time),
+            created_time: new Date(),
+            duration_minutes: dto.duration_minutes || 0,
+            type: dto.type || ContestType.PRACTICE,
+            is_active: dto.is_active !== undefined ? dto.is_active : true,
+        } as any);
+
+        this.logger.log(`Contest created: ${contest._id}`);
+
+        // 2. Lấy và random chọn problems theo cấu hình
+        const selectedProblemIds: string[] = [];
+        const allSelectedProblems: any[] = [];
+
+        for (const config of dto.problems_config) {
+            this.logger.log(
+                `Fetching problems for difficulty ${config.difficulty}, count: ${config.count}`,
+            );
+
+            // Xây dựng điều kiện query
+            const conditions: any = {
+                is_active: true,
+                is_public: true,
+                difficulty: config.difficulty,
+            };
+
+            if (config.topic_id) {
+                conditions.topic_id = config.topic_id;
+            }
+
+            if (config.sub_topic_id) {
+                conditions.sub_topic_id = config.sub_topic_id;
+            }
+
+            if (config.problem_type) {
+                // Kiểm tra loại bài tập
+                if (config.problem_type === "multipleChoiceForm") {
+                    conditions.is_multipleChoiceForm = true;
+                } else {
+                    conditions.problem_type = config.problem_type;
+                    conditions.is_multipleChoiceForm = false;
+                }
+            }
+
+            // Lấy tất cả problems phù hợp
+            const availableProblems = await this.problemsService.getMany(
+                user,
+                conditions,
+                {
+                    limit: 1000, // Lấy nhiều để có đủ để random
+                    enableDataPartition: false,
+                },
+            );
+
+            this.logger.log(
+                `Found ${availableProblems.length} available problems for difficulty ${config.difficulty}`,
+            );
+
+            // Loại bỏ các problems đã được chọn
+            const filteredProblems = availableProblems.filter(
+                (p: any) => !selectedProblemIds.includes(p._id),
+            );
+
+            if (filteredProblems.length < config.count) {
+                this.logger.warn(
+                    `Not enough problems for difficulty ${config.difficulty}. Required: ${config.count}, Available: ${filteredProblems.length}`,
+                );
+            }
+
+            // Random chọn số lượng bài theo yêu cầu
+            const shuffled = [...filteredProblems].sort(
+                () => 0.5 - Math.random(),
+            );
+            const selected = shuffled.slice(0, config.count);
+
+            selected.forEach((problem: any) => {
+                selectedProblemIds.push(problem._id);
+                allSelectedProblems.push(problem);
+            });
+
+            this.logger.log(
+                `Selected ${selected.length} problems for difficulty ${config.difficulty}`,
+            );
+        }
+
+        // 3. Thêm các problems đã chọn vào contest_problems
+        const defaultScore = dto.default_score || 100;
+        const selectedProblemsWithDetails: any[] = [];
+
+        for (let i = 0; i < allSelectedProblems.length; i++) {
+            const problem = allSelectedProblems[i];
+            const contestProblem = await this.contestProblemsService.create(
+                user,
+                {
+                    contest_id: contest._id,
+                    problem_id: problem._id,
+                    order_index: i + 1,
+                    score: defaultScore,
+                    is_visible: true,
+                } as any,
+            );
+
+            // Tạo object với thông tin đầy đủ về problem
+            selectedProblemsWithDetails.push({
+                _id: problem._id,
+                name: problem.name,
+                description: problem.description,
+                difficulty: problem.difficulty,
+                time_limit_ms: problem.time_limit_ms,
+                memory_limit_mb: problem.memory_limit_mb,
+                is_multipleChoiceForm: problem.is_multipleChoiceForm,
+                problem_type: problem.problem_type,
+                topic_id: problem.topic_id,
+                sub_topic_id: problem.sub_topic_id,
+                topic: problem.topic
+                    ? {
+                          _id: problem.topic._id,
+                          name: problem.topic.name,
+                          topic_name:
+                              problem.topic.topic_name || problem.topic.name,
+                      }
+                    : undefined,
+                sub_topic: problem.sub_topic
+                    ? {
+                          _id: problem.sub_topic._id,
+                          sub_topic_name: problem.sub_topic.sub_topic_name,
+                      }
+                    : undefined,
+                // Thông tin từ contest_problem
+                order_index: i + 1,
+                score: defaultScore,
+                is_visible: true,
+                contest_problem_id: contestProblem._id,
+            });
+
+            this.logger.log(
+                `Added problem ${problem._id} to contest ${contest._id} at position ${i + 1}`,
+            );
+        }
+
+        // 4. Lấy lại contest với đầy đủ thông tin
+        const contestWithDetails = await this.getById(user, contest._id, {});
+
+        this.logger.log(
+            `Contest ${contest._id} created with ${allSelectedProblems.length} problems`,
+        );
+
+        return {
+            ...contestWithDetails,
+            total_problems: allSelectedProblems.length,
+            problems_by_difficulty: dto.problems_config.reduce(
+                (acc: any, config) => {
+                    acc[config.difficulty] = config.count;
+                    return acc;
+                },
+                {},
+            ),
+            selected_problems: selectedProblemsWithDetails,
+        };
     }
 }

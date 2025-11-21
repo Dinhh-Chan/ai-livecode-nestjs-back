@@ -3,9 +3,9 @@ import { ContestsService } from "../services/contests.services";
 import { Contests } from "../entities/contests.entity";
 import { CreateContestsDto } from "../dto/create-contests.dto";
 import { UpdateContestsDto } from "../dto/update-contests.dto";
-import { Controller, Get, Param, Res } from "@nestjs/common";
+import { Controller, Get, Post, Param, Body, Res } from "@nestjs/common";
 import { Response } from "express";
-import { ApiTags, ApiOperation } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ConditionContestsDto } from "../dto/condition-contests.dto";
 import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
@@ -21,6 +21,7 @@ import {
     ApiPageResponse,
 } from "@common/decorator/api.decorator";
 import { ContestRankingItemDto } from "../dto/contest-ranking-item.dto";
+import { CreateContestWithRandomProblemsDto } from "../dto/create-contest-with-random-problems.dto";
 
 @Controller("contests")
 @ApiTags("Contests")
@@ -193,5 +194,24 @@ export class ContestsController extends BaseControllerFactory<Contests>(
             success: true,
             ...result,
         });
+    }
+
+    @Post("create-with-random-problems")
+    @AllowSystemRoles(SystemRole.ADMIN, SystemRole.TEACHER)
+    @ApiOperation({
+        summary: "Tạo contest với các bài tập được chọn ngẫu nhiên",
+        description:
+            "API để tạo contest mới với các bài tập được chọn ngẫu nhiên theo cấu hình: topic, sub_topic, độ khó, số lượng bài, và loại bài tập",
+    })
+    @ApiResponse({
+        status: 201,
+        description: "Contest được tạo thành công",
+        type: Contests,
+    })
+    async createContestWithRandomProblems(
+        @ReqUser() user: User,
+        @Body() dto: CreateContestWithRandomProblemsDto,
+    ) {
+        return this.contestsService.createContestWithRandomProblems(user, dto);
     }
 }

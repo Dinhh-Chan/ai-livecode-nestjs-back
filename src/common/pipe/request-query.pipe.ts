@@ -64,10 +64,86 @@ export class RequestQueryPipe
                 Object.assign(parsedSort, { _id: -1 });
             }
 
-            const parsedFilters =
-                (filters && filters.map((filter) => JSON.parse(filter))) || [];
-            const parsedPopulation =
-                population && population.map((item) => JSON.parse(item));
+            // Parse filters: có thể là string JSON array hoặc array of strings
+            let parsedFilters: any[] = [];
+            if (filters) {
+                if (Array.isArray(filters)) {
+                    // Nếu là array, kiểm tra phần tử đầu tiên có phải là JSON array string không
+                    if (
+                        filters.length === 1 &&
+                        typeof filters[0] === "string"
+                    ) {
+                        try {
+                            // Thử parse phần tử đầu tiên như JSON array
+                            const parsed = JSON.parse(filters[0]);
+                            parsedFilters = Array.isArray(parsed)
+                                ? parsed
+                                : [parsed];
+                        } catch (e) {
+                            // Nếu không phải JSON array, parse từng phần tử như filter object
+                            parsedFilters = filters.map((filter) => {
+                                if (typeof filter === "string") {
+                                    try {
+                                        return JSON.parse(filter);
+                                    } catch (e) {
+                                        return filter;
+                                    }
+                                }
+                                return filter;
+                            });
+                        }
+                    } else {
+                        // Nếu có nhiều phần tử, parse từng phần tử
+                        parsedFilters = filters.map((filter) => {
+                            if (typeof filter === "string") {
+                                try {
+                                    return JSON.parse(filter);
+                                } catch (e) {
+                                    return filter;
+                                }
+                            }
+                            return filter;
+                        });
+                    }
+                } else if (typeof filters === "string") {
+                    // Nếu là string (trường hợp hiếm), thử parse như JSON array
+                    try {
+                        const parsed = JSON.parse(filters);
+                        parsedFilters = Array.isArray(parsed)
+                            ? parsed
+                            : [parsed];
+                    } catch (e) {
+                        // Nếu không parse được, coi như là một filter đơn
+                        parsedFilters = [JSON.parse(filters)];
+                    }
+                }
+            }
+
+            // Parse population: có thể là string JSON array hoặc array of strings
+            let parsedPopulation: any[] | undefined = undefined;
+            if (population) {
+                if (typeof population === "string") {
+                    try {
+                        const parsed = JSON.parse(population);
+                        parsedPopulation = Array.isArray(parsed)
+                            ? parsed
+                            : [parsed];
+                    } catch (e) {
+                        parsedPopulation = [JSON.parse(population)];
+                    }
+                } else if (Array.isArray(population)) {
+                    parsedPopulation = population.map((item) => {
+                        if (typeof item === "string") {
+                            try {
+                                return JSON.parse(item);
+                            } catch (e) {
+                                return item;
+                            }
+                        }
+                        return item;
+                    });
+                }
+            }
             const res: CommonQueryDto = {
                 page: parsedPage,
                 limit: parsedLimit,
