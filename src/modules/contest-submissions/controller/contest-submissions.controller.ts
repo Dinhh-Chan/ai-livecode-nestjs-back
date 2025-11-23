@@ -10,6 +10,7 @@ import { SystemRole } from "@module/user/common/constant";
 import { ReqUser, AllowSystemRoles } from "@common/decorator/auth.decorator";
 import { User } from "@module/user/entities/user.entity";
 import { SubmitContestCodeDto } from "../dto/submit-contest-code.dto";
+import { SubmitContestMultipleChoiceDto } from "../dto/submit-contest-multiple-choice.dto";
 import { ApiListResponse } from "@common/decorator/api.decorator";
 
 @Controller("contest-submissions")
@@ -90,6 +91,29 @@ export class ContestSubmissionsController extends BaseControllerFactory<ContestS
     })
     async submitCode(@ReqUser() user: User, @Body() dto: SubmitContestCodeDto) {
         return this.contestSubmissionsService.submitCode(user, dto);
+    }
+
+    @Post("submit-multiple-choice")
+    @AllowSystemRoles(
+        SystemRole.USER,
+        SystemRole.ADMIN,
+        SystemRole.STUDENT,
+        SystemRole.TEACHER,
+    )
+    @ApiOperation({
+        summary: "Submit đáp án trắc nghiệm trong contest",
+        description:
+            "API để submit đáp án trắc nghiệm trong contest. Tương tự submit code nhưng dùng submitMultipleChoice. Lưu tất cả submissions vào ContestSubmissions (cả AC và không AC). Nếu AC và là lần đầu AC problem này trong contest, sẽ tăng accepted_count.",
+    })
+    @ApiResponse({
+        status: 201,
+        description: "Submit đáp án thành công",
+    })
+    async submitMultipleChoice(
+        @ReqUser() user: User,
+        @Body() dto: SubmitContestMultipleChoiceDto,
+    ) {
+        return this.contestSubmissionsService.submitMultipleChoice(user, dto);
     }
 
     @Get("contest/:contestId")

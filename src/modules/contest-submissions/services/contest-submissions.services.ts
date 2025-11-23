@@ -7,6 +7,7 @@ import { Entity } from "@module/repository";
 import { User } from "@module/user/entities/user.entity";
 import { StudentSubmissionsService } from "@module/student-submissions/services/student-submissions.services";
 import { SubmitContestCodeDto } from "../dto/submit-contest-code.dto";
+import { SubmitContestMultipleChoiceDto } from "../dto/submit-contest-multiple-choice.dto";
 import { SubmissionStatus } from "@module/student-submissions/entities/student-submissions.entity";
 import { ApiError } from "@config/exception/api-error";
 import { ContestUsersService } from "@module/contest-users/services/contest-users.services";
@@ -392,6 +393,31 @@ export class ContestSubmissionsService extends BaseService<
                 name: problem.name,
                 description: problem.description,
                 difficulty: problem.difficulty,
+                is_multipleChoiceForm: problem.is_multipleChoiceForm,
+                topic_id: problem.topic_id,
+                sub_topic_id: problem.sub_topic_id,
+                topic: problem.topic
+                    ? {
+                          _id: problem.topic._id,
+                          name: problem.topic.name,
+                          topic_name:
+                              problem.topic.topic_name || problem.topic.name,
+                      }
+                    : undefined,
+                sub_topic: problem.sub_topic
+                    ? {
+                          _id: problem.sub_topic._id,
+                          sub_topic_name: problem.sub_topic.sub_topic_name,
+                      }
+                    : undefined,
+                // Thêm multipleChoiceForm nếu is_multipleChoiceForm = true
+                multipleChoiceForm:
+                    problem.is_multipleChoiceForm &&
+                    problem.multipleChoiceForm &&
+                    typeof problem.multipleChoiceForm === "object" &&
+                    !Array.isArray(problem.multipleChoiceForm)
+                        ? problem.multipleChoiceForm
+                        : undefined,
             };
         }
 
@@ -417,5 +443,169 @@ export class ContestSubmissionsService extends BaseService<
             problem: problemInfo,
             contest: contestInfo,
         };
+    }
+
+    /**
+     * Submit multiple choice trong contest - tương tự submitCode nhưng dùng submitMultipleChoice
+     */
+    async submitMultipleChoice(
+        user: User,
+        dto: SubmitContestMultipleChoiceDto,
+    ): Promise<ContestSubmissions | any> {
+        // Kiểm tra user đã tham gia contest chưa
+        const contestUser = await this.contestUsersService.getOne(
+            user,
+            {
+                contest_id: dto.contest_id,
+                user_id: user._id,
+            } as any,
+            {},
+        );
+
+        if (!contestUser) {
+            throw ApiError.NotFound("error-contest-user-not-found", {
+                message: "Bạn chưa tham gia contest này",
+            });
+        }
+
+        if (contestUser.status !== ContestUserStatus.ENROLLED) {
+            throw ApiError.BadRequest("error-contest-user-not-enrolled", {
+                message: "Bạn chưa được duyệt tham gia contest này",
+            });
+        }
+
+        // Kiểm tra contest có tồn tại không
+        const contest = await this.contestsService.getById(
+            user,
+            dto.contest_id,
+            {},
+        );
+        if (!contest) {
+            throw ApiError.NotFound("error-setting-value-invalid", {
+                message: "Không tìm thấy contest",
+            });
+        }
+
+        // Kiểm tra problem có trong contest không
+        const contestProblems = contest.contest_problems || [];
+        const problemInContest = contestProblems.find(
+            (cp: any) => cp.problem_id === dto.problem_id,
+        );
+        if (!problemInContest) {
+            throw ApiError.BadRequest("error-setting-value-invalid", {
+                message: "Bài tập này không có trong contest",
+            });
+        }
+
+        this.logger.log(
+            `Submitting multiple choice for contest ${dto.contest_id}, problem ${dto.problem_id}`,
+        );
+
+        // Submit multiple choice qua StudentSubmissionsService
+        const studentSubmission =
+            await this.studentSubmissionsService.submitMultipleChoice(user, {
+                problem_id: dto.problem_id,
+                class_id: undefined, // Contest submissions không có class_id
+                answer: dto.answer,
+            });
+
+        this.logger.log(
+            `Multiple choice submission result: ${studentSubmission.status}, score: ${studentSubmission.score}`,
+        );
+
+        // Nếu AC, kiểm tra TRƯỚC KHI lưu xem đã có AC chưa
+        let isFirstAC = false;
+        if (studentSubmission.status === SubmissionStatus.ACCEPTED) {
+            // Kiểm tra xem đã có submission AC cho problem này trong contest chưa
+            const existingACSubmissions = await this.getMany(
+                user,
+                {
+                    contest_id: dto.contest_id,
+                    student_id: user._id,
+                    problem_id: dto.problem_id,
+                    status: SubmissionStatus.ACCEPTED,
+                } as any,
+                {},
+            );
+
+            // Nếu chưa có AC nào, đây là lần đầu AC
+            if (existingACSubmissions.length === 0) {
+                isFirstAC = true;
+            }
+        }
+
+        // Lấy submission đã được cập nhật từ StudentSubmissions
+        const updatedStudentSubmission =
+            await this.studentSubmissionsService.getById(
+                user,
+                studentSubmission._id,
+                {},
+            );
+
+        // Lưu vào ContestSubmissions (cả AC và không AC)
+        let contestSubmission: ContestSubmissions;
+        try {
+            contestSubmission = await this.create(user, {
+                contest_id: dto.contest_id,
+                submission_id: updatedStudentSubmission.submission_id,
+                student_id: user._id,
+                problem_id: dto.problem_id,
+                code: updatedStudentSubmission.code, // Đã được parse thành số
+                language_id: updatedStudentSubmission.language_id || 0,
+                status: updatedStudentSubmission.status,
+                score: updatedStudentSubmission.score || 0,
+                execution_time_ms:
+                    updatedStudentSubmission.execution_time_ms || 0,
+                memory_used_mb: updatedStudentSubmission.memory_used_mb || 0,
+                test_cases_passed:
+                    updatedStudentSubmission.test_cases_passed || 0,
+                total_test_cases:
+                    updatedStudentSubmission.total_test_cases || 0,
+                submitted_at:
+                    updatedStudentSubmission.submitted_at || new Date(),
+                solved_at:
+                    updatedStudentSubmission.status ===
+                    SubmissionStatus.ACCEPTED
+                        ? new Date()
+                        : undefined,
+            } as any);
+        } catch (error: any) {
+            // Xử lý lỗi unique constraint
+            if (
+                error?.name === "SequelizeUniqueConstraintError" ||
+                error?.original?.code === "23505"
+            ) {
+                this.logger.error(
+                    `Unique constraint violation. Constraint 'contest_submissions_contest_student_problem_unique_idx' still exists in database. Please run migration to drop it.`,
+                );
+                throw ApiError.Conflict("error-unique-constraint", {
+                    message:
+                        "Không thể lưu submission. Unique constraint vẫn còn trong database. Vui lòng chạy migration để xóa constraint.",
+                    detail: "Constraint 'contest_submissions_contest_student_problem_unique_idx' cần được xóa để cho phép nhiều submissions cho cùng một problem.",
+                });
+            }
+            throw error;
+        }
+
+        // Nếu là lần đầu AC, tăng accepted_count
+        if (isFirstAC) {
+            await this.contestUsersService.incrementAcceptedCount(
+                user,
+                dto.contest_id,
+                user._id,
+                1,
+            );
+
+            this.logger.log(
+                `First AC for user ${user._id}, problem ${dto.problem_id} in contest ${dto.contest_id}. Incremented accepted_count.`,
+            );
+        }
+
+        this.logger.log(
+            `Contest multiple choice submission saved for user ${user._id}, problem ${dto.problem_id}, status: ${updatedStudentSubmission.status}`,
+        );
+
+        // Làm giàu với thông tin đầy đủ
+        return await this.getById(user, contestSubmission._id, {});
     }
 }
